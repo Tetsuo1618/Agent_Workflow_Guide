@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Workflow Prompt Guide</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0f1115;
+            color: #e2e8f0;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+        header { text-align: center; margin-bottom: 3rem; }
+        header h1 { font-size: 2.2rem; background: linear-gradient(135deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem; }
+        header p { color: #94a3b8; font-size: 1.1rem; }
+
+        .progress-bar {
+            display: flex; justify-content: space-between; margin-bottom: 2rem;
+            position: relative;
+        }
+        .progress-bar::before {
+            content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 3px;
+            background: #2d3139; z-index: 0; transform: translateY(-50%);
+        }
+        .step-dot {
+            width: 40px; height: 40px; border-radius: 50%; background: #181b21;
+            border: 2px solid #2d3139; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; z-index: 1; cursor: pointer; transition: all 0.3s;
+            color: #94a3b8;
+        }
+        .step-dot.active { border-color: #6366f1; background: #6366f1; color: white; }
+        .step-dot.completed { border-color: #22c55e; background: #22c55e; color: white; }
+
+        .card {
+            background: #181b21; border: 1px solid #2d3139; border-radius: 16px;
+            padding: 2rem; margin-bottom: 1.5rem;
+        }
+        .card.hidden { display: none; }
+
+        .card h2 { color: #6366f1; margin-bottom: 1rem; font-size: 1.5rem; }
+        .card h3 { color: #8b5cf6; margin: 1.5rem 0 0.5rem; font-size: 1.1rem; }
+        .card p { color: #e2e8f0; margin-bottom: 1rem; }
+
+        .highlight {
+            background: rgba(99, 102, 241, 0.15); border-left: 3px solid #6366f1;
+            padding: 1rem 1.2rem; border-radius: 0 8px 8px 0; margin: 1rem 0;
+        }
+        .tip {
+            background: rgba(34, 197, 94, 0.1); border-left: 3px solid #22c55e;
+            padding: 1rem 1.2rem; border-radius: 0 8px 8px 0; margin: 1rem 0;
+        }
+        .warning {
+            background: rgba(245, 158, 11, 0.1); border-left: 3px solid #f59e0b;
+            padding: 1rem 1.2rem; border-radius: 0 8px 8px 0; margin: 1rem 0;
+        }
+
+        .example-box {
+            background: #0f1115; border: 1px solid #2d3139; border-radius: 10px;
+            padding: 1.2rem; margin: 1rem 0; font-family: 'Courier New', monospace;
+            font-size: 0.9rem; white-space: pre-wrap; position: relative;
+        }
+        .example-box .label {
+            position: absolute; top: -10px; left: 15px; background: #181b21;
+            padding: 0 8px; font-size: 0.75rem; color: #94a3b8; font-family: sans-serif;
+            border: 1px solid #2d3139; border-radius: 4px;
+        }
+        .bad { border-color: #ef4444; }
+        .good { border-color: #22c55e; }
+
+        .btn {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white; border: none; padding: 0.9rem 2rem; border-radius: 10px;
+            font-size: 1rem; font-weight: 600; cursor: pointer;
+            margin-top: 1rem; display: inline-block;
+        }
+        .btn:hover { filter: brightness(1.1); }
+        .btn-secondary {
+            background: transparent; border: 2px solid #2d3139; color: #e2e8f0;
+            margin-left: 0.5rem;
+        }
+        .btn-secondary:hover { border-color: #6366f1; }
+
+        .nav-buttons { display: flex; justify-content: space-between; margin-top: 2rem; }
+
+        .framework-visual {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem; margin: 1.5rem 0;
+        }
+        .framework-card {
+            background: #0f1115; border: 1px solid #2d3139; border-radius: 12px;
+            padding: 1.2rem; text-align: center;
+        }
+        .framework-card .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        .framework-card h4 { color: #6366f1; font-size: 0.95rem; margin-bottom: 0.3rem; }
+        .framework-card p { font-size: 0.8rem; color: #94a3b8; }
+
+        .agent-types {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0;
+        }
+        .agent-card {
+            background: #0f1115; border: 1px solid #2d3139; border-radius: 10px;
+            padding: 1rem;
+        }
+        .agent-card h4 { color: #8b5cf6; margin-bottom: 0.3rem; }
+        .agent-card p { font-size: 0.85rem; color: #94a3b8; margin: 0; }
+
+        .checklist {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin: 1rem 0;
+        }
+        .check-item {
+            background: #0f1115; border: 1px solid #2d3139; border-radius: 8px;
+            padding: 0.8rem 1rem; cursor: pointer; font-size: 0.9rem;
+        }
+        .check-item:hover { border-color: #6366f1; }
+        .check-item.checked { border-color: #22c55e; background: rgba(34, 197, 94, 0.1); }
+        .check-item.checked::before { content: "OK "; color: #22c55e; font-weight: bold; }
+
+        .sandbox textarea {
+            width: 100%; min-height: 150px; background: #0f1115; border: 1px solid #2d3139;
+            border-radius: 10px; padding: 1rem; color: #e2e8f0; font-family: inherit;
+            font-size: 1rem; resize: vertical; margin-bottom: 1rem;
+        }
+
+        .status-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 1rem;
+        }
+        .status-item {
+            padding: 0.5rem; background: #0f1115; border-radius: 6px; border: 1px solid #2d3139;
+        }
+
+        @media (max-width: 600px) {
+            .checklist, .agent-types { grid-template-columns: 1fr; }
+            header h1 { font-size: 1.6rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Agent Workflow Prompt Guide</h1>
+            <p>From zero to effective AI agent prompting</p>
+        </header>
+
+        <div class="progress-bar">
+            <div class="step-dot active" data-step="0">1</div>
+            <div class="step-dot" data-step="1">2</div>
+            <div class="step-dot" data-step="2">3</div>
+            <div class="step-dot" data-step="3">4</div>
+            <div class="step-dot" data-step="4">5</div>
+            <div class="step-dot" data-step="5">6</div>
+        </div>
+
+        <!-- STEP 1 -->
+        <div class="card" id="card-0">
+            <h2>Step 1: What Is an AI Agent?</h2>
+            <p>An <strong>AI agent</strong> is an AI that doesn't just answer questions — it <em>performs tasks</em> using tools, memory, and reasoning across multiple steps.</p>
+
+            <div class="highlight">
+                <strong>Key difference:</strong> Regular chat = one question, one answer.<br>
+                An agent = give a goal, the AI figures out the steps to achieve it.
+            </div>
+
+            <h3>Common Agent Types</h3>
+            <div class="agent-types">
+                <div class="agent-card">
+                    <h4>Tool-Using Agent</h4>
+                    <p>Uses calculators, search, code, APIs to complete tasks</p>
+                </div>
+                <div class="agent-card">
+                    <h4>Workflow Agent</h4>
+                    <p>Follows a predefined sequence of steps</p>
+                </div>
+                <div class="agent-card">
+                    <h4>Reasoning Agent</h4>
+                    <p>Breaks complex problems into sub-tasks</p>
+                </div>
+                <div class="agent-card">
+                    <h4>Multi-Agent</h4>
+                    <p>Several agents working together, each with a different role</p>
+                </div>
+            </div>
+
+            <div class="tip">
+                <strong>Beginner mindset:</strong> Think of an agent like a very smart intern. Give clear instructions, context, and boundaries — or they'll guess wrong.
+            </div>
+
+            <div class="nav-buttons">
+                <div></div>
+                <button class="btn" id="next-0">Next: The Framework</button>
+            </div>
+        </div>
+
+        <!-- STEP 2 -->
+        <div class="card hidden" id="card-1">
+            <h2>Step 2: The RTCCO Framework</h2>
+            <p>Every great agent prompt has 5 parts: <strong>Role, Task, Context, Constraints, Output</strong>.</p>
+
+            <div class="framework-visual">
+                <div class="framework-card">
+                    <div class="icon">R</div>
+                    <h4>ROLE</h4>
+                    <p>Who should the AI act as?</p>
+                </div>
+                <div class="framework-card">
+                    <div class="icon">T</div>
+                    <h4>TASK</h4>
+                    <p>What exactly should it do?</p>
+                </div>
+                <div class="framework-card">
+                    <div class="icon">C</div>
+                    <h4>CONTEXT</h4>
+                    <p>What background info is needed?</p>
+                </div>
+                <div class="framework-card">
+                    <div class="icon">C</div>
+                    <h4>CONSTRAINTS</h4>
+                    <p>What are the rules/limits?</p>
+                </div>
+                <div class="framework-card">
+                    <div class="icon">O</div>
+                    <h4>OUTPUT</h4>
+                    <p>How should results look?</p>
+                </div>
+            </div>
+
+            <div class="example-box">
+                <span class="label">EXAMPLE</span>
+ROLE: You are a social media manager for a fitness brand.
+
+TASK: Write 3 Instagram captions promoting our new protein shake.
+
+CONTEXT: Our audience is gym beginners aged 18-30. They value authenticity and hate salesy content. The shake is plant-based and chocolate-flavored.
+
+CONSTRAINTS: Each caption under 150 characters. Max 3 emojis. Avoid medical claims.
+
+OUTPUT: Numbered list. After each, explain why it works for our audience.
+            </div>
+
+            <div class="warning">
+                <strong>Beginner mistake:</strong> "Write me some Instagram captions." The AI has no idea about your brand, tone, length, or audience. Generic results.
+            </div>
+
+            <div class="nav-buttons">
+                <button class="btn btn-secondary" id="prev-1">Back</button>
+                <button class="btn" id="next-1">Next: Before & After</button>
+            </div>
+        </div>
+
+        <!-- STEP 3 -->
+        <div class="card hidden" id="card-2">
+            <h2>Step 3: Bad Prompts vs. Good Prompts</h2>
+            <p>Seeing the transformation is the fastest way to learn.</p>
+
+            <h3>Example 1: Writing Assistant</h3>
+            <div class="example-box bad">
+                <span class="label" style="color:#ef4444">BAD</span>
+Write an email to my boss.
+            </div>
+            <div class="example-box good">
+                <span class="label" style="color:#22c55e">GOOD</span>
+ROLE: You are a professional workplace communication expert.
+
+TASK: Draft an email requesting a 3-day extension on the Q3 report deadline.
+
+CONTEXT: I have been overloaded with client emergencies this week. My boss values proactive communication. Deadline is this Friday.
+
+CONSTRAINTS: Under 150 words. Polite but direct. No excuses.
+
+OUTPUT: Subject line + email body. Also suggest 2 alternative opening lines.
+            </div>
+
+            <h3>Example 2: Coding Agent</h3>
+            <div class="example-box bad">
+                <span class="label" style="color:#ef4444">BAD</span>
+Make a Python script for a calculator.
+            </div>
+            <div class="example-box good">
+                <span class="label" style="color:#22c55e">GOOD</span>
+ROLE: You are a Python developer who writes clean, commented code for beginners.
+
+TASK: Create a command-line calculator that handles +, -, *, /, and exponentiation.
+
+CONTEXT: This is for a high school coding class. Students have learned basic functions but not classes yet.
+
+CONSTRAINTS: Use only functions (no classes). Include input validation so the program doesn't crash. Add comments explaining each function.
+
+OUTPUT: Full code in a code block, then explain how each function works in plain English.
+            </div>
+
+            <div class="nav-buttons">
+                <button class="btn btn-secondary" id="prev-2">Back</button>
+                <button class="btn" id="next-2">Next: The Checklist</button>
+            </div>
+        </div>
+
+        <!-- STEP 4 -->
+        <div class="card hidden" id="card-3">
+            <h2>Step 4: The Prompt Quality Checklist</h2>
+            <p>Before sending any prompt to an agent, run through this checklist. Click each item to check it off.</p>
+
+            <div class="checklist">
+                <div class="check-item">Did I assign a specific role?</div>
+                <div class="check-item">Is the task a single, clear action?</div>
+                <div class="check-item">Did I include audience/context?</div>
+                <div class="check-item">Are there word/length limits?</div>
+                <div class="check-item">Did I ban things to avoid?</div>
+                <div class="check-item">Is the output format specified?</div>
+                <div class="check-item">Did I include examples if needed?</div>
+                <div class="check-item">Is the tone/voice defined?</div>
+                <div class="check-item">Did I set reasoning depth?</div>
+                <div class="check-item">Are success criteria stated?</div>
+            </div>
+
+            <div class="tip">
+                <strong>Pro tip:</strong> If you check fewer than 7 boxes, your prompt needs more detail.
+            </div>
+
+            <div class="nav-buttons">
+                <button class="btn btn-secondary" id="prev-3">Back</button>
+                <button class="btn" id="next-3">Next: Practice Sandbox</button>
+            </div>
+        </div>
+
+        <!-- STEP 5 -->
+        <div class="card hidden" id="card-4">
+            <h2>Step 5: Prompt Practice Sandbox</h2>
+            <p>Draft your prompt below. As you type, the guide will highlight which RTCCO elements you've included.</p>
+
+            <div class="sandbox">
+                <textarea id="promptDraft" placeholder="Start typing your agent prompt here..."></textarea>
+            </div>
+
+            <div class="status-grid">
+                <div class="status-item" id="roleStatus">Role: Missing</div>
+                <div class="status-item" id="taskStatus">Task: Missing</div>
+                <div class="status-item" id="contextStatus">Context: Missing</div>
+                <div class="status-item" id="constraintsStatus">Constraints: Missing</div>
+                <div class="status-item" id="outputStatus">Output: Missing</div>
+                <div class="status-item" id="scoreStatus">Score: 0/5</div>
+            </div>
+
+            <div id="suggestions" style="margin-top: 1rem; padding: 1rem; background: #0f1115; border-radius: 8px; border: 1px solid #2d3139; color: #94a3b8;">
+                Start typing to see suggestions...
+            </div>
+
+            <div class="nav-buttons">
+                <button class="btn btn-secondary" id="prev-4">Back</button>
+                <button class="btn" id="next-4">Next: Workflow Patterns</button>
+            </div>
+        </div>
+
+        <!-- STEP 6 -->
+        <div class="card hidden" id="card-5">
+            <h2>Step 6: Common Agent Workflow Patterns</h2>
+            <p>Once you master single prompts, chain them into workflows. Here are 3 beginner-friendly patterns.</p>
+
+            <h3>Pattern 1: The Review Loop</h3>
+            <div class="example-box">
+                <span class="label">REVIEW LOOP</span>
+Step 1: Agent A drafts content (uses RTCCO prompt)
+Step 2: Agent B reviews against criteria (separate "editor" agent)
+Step 3: If issues found -> back to Agent A with feedback
+Step 4: Repeat until Agent B approves
+
+Use this for: Important emails, code, legal text, proposals
+            </div>
+
+            <h3>Pattern 2: Research to Synthesis</h3>
+            <div class="example-box">
+                <span class="label">RESEARCH PIPELINE</span>
+Step 1: Agent searches and collects 10 sources on topic X
+Step 2: Agent extracts key findings from each source
+Step 3: Agent synthesizes findings into a summary table
+Step 4: Agent drafts recommendations based on patterns
+
+Use this for: Market research, competitor analysis, literature reviews
+            </div>
+
+            <h3>Pattern 3: Decision Tree</h3>
+            <div class="example-box">
+                <span class="label">DECISION TREE</span>
+Step 1: Agent classifies incoming request (type A, B, or C)
+Step 2: If Type A -> Route to Agent specialized in A
+Step 3: If Type B -> Route to Agent specialized in B
+Step 4: If Type C -> Route to Agent specialized in C
+Step 5: Each specialist handles with its own RTCCO prompt
+
+Use this for: Customer support triage, content moderation, ticket routing
+            </div>
+
+            <div class="highlight">
+                <strong>Your next step:</strong> Pick ONE pattern. Write the RTCCO prompt for each agent. Test them individually first, then connect them.
+            </div>
+
+            <div class="tip">
+                <strong>Remember:</strong> Even the most complex workflow is just a series of well-written single prompts connected by logic. Master the single prompt first.
+            </div>
+
+            <div class="nav-buttons">
+                <button class="btn btn-secondary" id="prev-5">Back</button>
+                <button class="btn" id="restart">Start Over</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+(function() {
+    'use strict';
+
+    var currentStep = 0;
+    var totalSteps = 6;
+
+    function showStep(stepNum) {
+        // Hide all cards
+        for (var i = 0; i < totalSteps; i++) {
+            document.getElementById('card-' + i).classList.add('hidden');
+        }
+        // Show target card
+        document.getElementById('card-' + stepNum).classList.remove('hidden');
+
+        // Update dots
+        var dots = document.querySelectorAll('.step-dot');
+        for (var j = 0; j < dots.length; j++) {
+            dots[j].classList.remove('active', 'completed');
+            if (j < stepNum) {
+                dots[j].classList.add('completed');
+            } else if (j === stepNum) {
+                dots[j].classList.add('active');
+            }
+        }
+
+        currentStep = stepNum;
+        window.scrollTo(0, 0);
+    }
+
+    function nextStep() {
+        if (currentStep < totalSteps - 1) {
+            showStep(currentStep + 1);
+        }
+    }
+
+    function prevStep() {
+        if (currentStep > 0) {
+            showStep(currentStep - 1);
+        }
+    }
+
+    // Step dots
+    var dots = document.querySelectorAll('.step-dot');
+    for (var d = 0; d < dots.length; d++) {
+        dots[d].addEventListener('click', (function(step) {
+            return function() { showStep(step); };
+        })(parseInt(dots[d].getAttribute('data-step'))));
+    }
+
+    // Next buttons
+    document.getElementById('next-0').addEventListener('click', nextStep);
+    document.getElementById('next-1').addEventListener('click', nextStep);
+    document.getElementById('next-2').addEventListener('click', nextStep);
+    document.getElementById('next-3').addEventListener('click', nextStep);
+    document.getElementById('next-4').addEventListener('click', nextStep);
+
+    // Prev buttons
+    document.getElementById('prev-1').addEventListener('click', prevStep);
+    document.getElementById('prev-2').addEventListener('click', prevStep);
+    document.getElementById('prev-3').addEventListener('click', prevStep);
+    document.getElementById('prev-4').addEventListener('click', prevStep);
+    document.getElementById('prev-5').addEventListener('click', prevStep);
+
+    // Restart
+    document.getElementById('restart').addEventListener('click', function() {
+        showStep(0);
+    });
+
+    // Checklist items
+    var checkItems = document.querySelectorAll('.check-item');
+    for (var c = 0; c < checkItems.length; c++) {
+        checkItems[c].addEventListener('click', function() {
+            this.classList.toggle('checked');
+        });
+    }
+
+    // Prompt analyzer
+    document.getElementById('promptDraft').addEventListener('input', function() {
+        var text = this.value.toLowerCase();
+        var score = 0;
+        var suggestions = [];
+
+        var roleWords = ['role', 'act as', 'you are', 'you are a', 'you are an', 'be a', 'be an', 'persona', 'expert', 'specialist'];
+        var hasRole = false;
+        for (var r = 0; r < roleWords.length; r++) {
+            if (text.indexOf(roleWords[r]) !== -1) { hasRole = true; break; }
+        }
+        document.getElementById('roleStatus').innerHTML = 'Role: ' + (hasRole ? '<span style="color:#22c55e">Found</span>' : '<span style="color:#ef4444">Missing</span>');
+        if (hasRole) score++;
+        else suggestions.push("Add a ROLE: 'You are a [specific expert]'");
+
+        var taskWords = ['task', 'create', 'write', 'generate', 'build', 'make', 'develop', 'design', 'analyze', 'summarize', 'draft'];
+        var hasTask = false;
+        for (var t = 0; t < taskWords.length; t++) {
+            if (text.indexOf(taskWords[t]) !== -1) { hasTask = true; break; }
+        }
+        document.getElementById('taskStatus').innerHTML = 'Task: ' + (hasTask ? '<span style="color:#22c55e">Found</span>' : '<span style="color:#ef4444">Missing</span>');
+        if (hasTask) score++;
+        else suggestions.push("Add a TASK: State exactly what you want done");
+
+        var contextWords = ['context', 'background', 'audience', 'for', 'target', 'who', 'this is for', 'we are', 'our'];
+        var hasContext = false;
+        for (var ctx = 0; ctx < contextWords.length; ctx++) {
+            if (text.indexOf(contextWords[ctx]) !== -1) { hasContext = true; break; }
+        }
+        document.getElementById('contextStatus').innerHTML = 'Context: ' + (hasContext ? '<span style="color:#22c55e">Found</span>' : '<span style="color:#ef4444">Missing</span>');
+        if (hasContext) score++;
+        else suggestions.push("Add CONTEXT: Who is this for? What background is needed?");
+
+        var constraintWords = ['constraint', 'limit', 'maximum', 'minimum', 'under', 'over', 'avoid', 'do not', 'must', 'cannot', 'only', 'rules'];
+        var hasConstraints = false;
+        for (var con = 0; con < constraintWords.length; con++) {
+            if (text.indexOf(constraintWords[con]) !== -1) { hasConstraints = true; break; }
+        }
+        document.getElementById('constraintsStatus').innerHTML = 'Constraints: ' + (hasConstraints ? '<span style="color:#22c55e">Found</span>' : '<span style="color:#ef4444">Missing</span>');
+        if (hasConstraints) score++;
+        else suggestions.push("Add CONSTRAINTS: Word limits, things to avoid");
+
+        var outputWords = ['output', 'format', 'return', 'provide', 'give me', 'structure', 'table', 'list', 'bullet', 'json'];
+        var hasOutput = false;
+        for (var o = 0; o < outputWords.length; o++) {
+            if (text.indexOf(outputWords[o]) !== -1) { hasOutput = true; break; }
+        }
+        document.getElementById('outputStatus').innerHTML = 'Output: ' + (hasOutput ? '<span style="color:#22c55e">Found</span>' : '<span style="color:#ef4444">Missing</span>');
+        if (hasOutput) score++;
+        else suggestions.push("Add OUTPUT: Specify format (list, table, JSON)");
+
+        var scoreColor = '#ef4444';
+        if (score >= 4) scoreColor = '#22c55e';
+        else if (score >= 2) scoreColor = '#f59e0b';
+        document.getElementById('scoreStatus').innerHTML = 'Score: <span style="color:' + scoreColor + '">' + score + '/5</span>';
+
+        var sugEl = document.getElementById('suggestions');
+        if (suggestions.length === 0) {
+            sugEl.innerHTML = '<span style="color:#22c55e">Excellent! Your prompt covers all 5 RTCCO elements.</span>';
+        } else {
+            var html = '<strong style="color:#e2e8f0">Suggestions to improve:</strong><ul style="margin-top:0.5rem; margin-left:1.2rem;">';
+            for (var s = 0; s < suggestions.length; s++) {
+                html += '<li>' + suggestions[s] + '</li>';
+            }
+            html += '</ul>';
+            sugEl.innerHTML = html;
+        }
+    });
+
+})();
+</script>
+</body>
+</html>
