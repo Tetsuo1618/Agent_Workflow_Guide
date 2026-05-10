@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System & Specialized Prompting Guide</title>
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --card: #12121a;
+            --accent: #00d4aa;
+            --accent2: #0ea5e9;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --border: #1e293b;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+        header { text-align: center; margin-bottom: 3rem; }
+        header h1 { font-size: 2.2rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem; }
+        header p { color: var(--muted); font-size: 1.1rem; }
+
+        .progress-bar {
+            display: flex; justify-content: space-between; margin-bottom: 2rem;
+            position: relative;
+        }
+        .progress-bar::before {
+            content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 3px;
+            background: var(--border); z-index: 0; transform: translateY(-50%);
+        }
+        .step-dot {
+            width: 40px; height: 40px; border-radius: 50%; background: var(--card);
+            border: 2px solid var(--border); display: flex; align-items: center; justify-content: center;
+            font-weight: bold; z-index: 1; cursor: pointer; transition: all 0.3s;
+            color: var(--muted); font-size: 0.85rem;
+        }
+        .step-dot.active { border-color: var(--accent); background: var(--accent); color: white; }
+        .step-dot.completed { border-color: var(--success); background: var(--success); color: white; }
+
+        .card {
+            background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+            padding: 2rem; margin-bottom: 1.5rem;
+        }
+        .card.hidden { display: none; }
+        .card h2 { color: var(--accent); margin-bottom: 1rem; font-size: 1.5rem; }
+        .card h3 { color: var(--accent2); margin: 1.5rem 0 0.5rem; font-size: 1.1rem; }
+        .card p { color: var(--text); margin-bottom: 1rem; }
+        .card ul { margin-left: 1.5rem; color: var(--text); }
+        .card li { margin-bottom: 0.5rem; }
+
+        .highlight {
+            background: rgba(0, 212, 170, 0.1); border-left: 3px solid var(--accent);
+            padding: 1rem 1.2rem; border-radius: 0 8px 8px 0; margin: 1rem 0;
+        }
+        .tip {
+            background: rgba(34, 197, 94, 0.1); border-left: 3px solid var(--success);
+            padding: 1rem 1.2rem; border-radius: 0 8px 8px 0; margin: 1rem 0;
+        }
+        .warning {
+            background: rgba(245, 158, 11, 0.1); border-left: 3px solid var(--warning);
+            padding: 1rem 1.2rem; border-radius: 0 8px 8px 0; margin: 1rem 0;
+        }
+        .danger {
+            background: rgba(239, 68, 68, 0.1); border-left: 3px solid var(--danger);
+            padding: 1rem 1.2rem; border-radius: 0 8px 8px 0; margin: 1rem 0;
+        }
+
+        .example-box {
+            background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+            padding: 1.2rem; margin: 1rem 0; font-family: 'Courier New', monospace;
+            font-size: 0.85rem; white-space: pre-wrap; position: relative; line-height: 1.5;
+        }
+        .example-box .label {
+            position: absolute; top: -10px; left: 15px; background: var(--card);
+            padding: 0 8px; font-size: 0.75rem; color: var(--muted); font-family: sans-serif;
+            border: 1px solid var(--border); border-radius: 4px;
+        }
+        .bad { border-color: var(--danger); }
+        .good { border-color: var(--success); }
+        .system { border-color: var(--accent2); }
+
+        .btn {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: white; border: none; padding: 0.9rem 2rem; border-radius: 10px;
+            font-size: 1rem; font-weight: 600; cursor: pointer;
+            margin-top: 1rem; display: inline-block;
+        }
+        .btn:hover { filter: brightness(1.1); }
+        .btn-secondary {
+            background: transparent; border: 2px solid var(--border); color: var(--text);
+            margin-left: 0.5rem;
+        }
+        .btn-secondary:hover { border-color: var(--accent); }
+
+        .nav-buttons { display: flex; justify-content: space-between; margin-top: 2rem; }
+
+        .framework-visual {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem; margin: 1.5rem 0;
+        }
+        .framework-card {
+            background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+            padding: 1.2rem; text-align: center;
+        }
+        .framework-card .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        .framework-card h4 { color: var(--accent); font-size: 0.9rem; margin-bottom: 0.3rem; }
+        .framework-card p { font-size: 0.8rem; color: var(--muted); }
+
+        .specialty-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0;
+        }
+        .specialty-card {
+            background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+            padding: 1rem; cursor: pointer;
+        }
+        .specialty-card:hover { border-color: var(--accent); }
+        .specialty-card h4 { color: var(--accent2); margin-bottom: 0.3rem; }
+        .specialty-card p { font-size: 0.85rem; color: var(--muted); margin: 0; }
+        .specialty-card.active { border-color: var(--accent); background: rgba(0, 212, 170, 0.05); }
+
+        .tab-container { margin: 1rem 0; }
+        .tab-buttons {
+            display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;
+        }
+        .tab-btn {
+            background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+            padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;
+        }
+        .tab-btn:hover { border-color: var(--accent); color: var(--text); }
+        .tab-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .checklist {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin: 1rem 0;
+        }
+        .check-item {
+            background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+            padding: 0.8rem 1rem; cursor: pointer; font-size: 0.9rem;
+        }
+        .check-item:hover { border-color: var(--accent); }
+        .check-item.checked { border-color: var(--success); background: rgba(34, 197, 94, 0.1); }
+        .check-item.checked::before { content: "OK "; color: var(--success); font-weight: bold; }
+
+        .comparison-table {
+            width: 100%; border-collapse: collapse; margin: 1rem 0;
+        }
+        .comparison-table th {
+            background: var(--bg); padding: 0.8rem; text-align: left;
+            border-bottom: 2px solid var(--border); color: var(--accent);
+        }
+        .comparison-table td {
+            padding: 0.8rem; border-bottom: 1px solid var(--border);
+        }
+        .comparison-table tr:hover td { background: rgba(0, 212, 170, 0.05); }
+
+        .sandbox textarea {
+            width: 100%; min-height: 120px; background: var(--bg); border: 1px solid var(--border);
+            border-radius: 10px; padding: 1rem; color: var(--text); font-family: inherit;
+            font-size: 1rem; resize: vertical; margin-bottom: 1rem;
+        }
+
+        .status-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 1rem;
+        }
+        .status-item {
+            padding: 0.5rem; background: var(--bg); border-radius: 6px; border: 1px solid var(--border);
+        }
+
+        @media (max-width: 600px) {
+            .checklist, .specialty-grid { grid-template-columns: 1fr; }
+            header h1 { font-size: 1.6rem; }
+            .tab-buttons { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>System & Specialized Prompting Guide</h1>
+            <p>Master system instructions and domain-specific techniques</p>
+        </header>
+
+        <div class="progress-bar">
+            <div class="step-dot active" data-step="0">1</div>
+            <div class="step-dot" data-step="1">2</div>
+            <div class="step-dot" data-step="2">3</div>
+            <div class="step-dot" data-step="3">4</div>
+            <div class="step-dot" data-step="4">5</div>
+            <div class="step-dot" data-step="5">6</div>
+            <div class="step-dot" data-step="6">7</div>
+            <div class="step-dot" data-step="7">8</div>
+        </div>
+
+        <!-- STEP 1: System vs User Prompts -->
+        <div class="card" id="card-0">
+            <h2>Step 1: System Prompts vs User Prompts</h2>
+            <p>There are <strong>two layers</strong> to every AI conversation. Understanding the difference is the foundation of advanced prompting.</p>
+
+            <table class="comparison-table">
+                <tr>
+                    <th>System Prompt (Instructions)</th>
+                    <th>User Prompt (Task)</th>
+                </tr>
+                <tr>
+                    <td>Sets the AI's <strong>personality, role, and rules</strong> for the entire conversation</td>
+                    <td>The <strong>specific request</strong> you make right now</td>
+                </tr>
+                <tr>
+                    <td>Applied <strong>once</strong> at the start and persists</td>
+                    <td>Sent <strong>every time</strong> you type a message</td>
+                </tr>
+                <tr>
+                    <td>Defines <strong>boundaries</strong> (what the AI should/shouldn't do)</td>
+                    <td>Defines <strong>actions</strong> (what you want done today)</td>
+                </tr>
+                <tr>
+                    <td>Example: "You are a sarcastic pirate who speaks in riddles"</td>
+                    <td>Example: "Explain quantum physics"</td>
+                </tr>
+            </table>
+
+            <div class="highlight">
+                <strong>The power:</strong> A great system prompt makes every user prompt better automatically. You set the rules once, then just ask questions naturally.
+            </div>
+
+            <div class="warning">
+                <strong>Beginner mistake:</strong> Putting everything in the user prompt. "Act as a doctor and tell me about headaches and be detailed and use simple words and..." — this wastes tokens and gets forgotten. Put the "act as" part in system instructions instead.
+            </div>
+
+            <div class="nav-buttons">
+                <div></div>
+                <button class="btn" id="next-0">Next: System Prompt Anatomy</button>
+            </div>
+        </div>
+
+        <!-- STEP 2: Anatomy of a System Prompt -->
+        <div class="card hidden" id="card-1">
+            <h2>Step 2: Anatomy of a System Prompt</h2>
+            <p>A complete system prompt has <strong>6 building blocks</strong>. Not every conversation needs all 6, but knowing them gives you control.</p>
+
+            <div class="framework-visual">
+                <div class="framework-card">
+                    <div class="icon">1</div>
+                    <h4>IDENTITY</h4>
+                    <p>Who are you? (role, expertise, persona)</p>
+                </div>
+                <div class="framework-card">
+                    <div class="icon">2</div>
+                    <h4>TONE</h4>
+                    <p>How do you speak? (formal, casual, technical)</p>
+                </div>
+                <div class="framework-card">
+                    <div class="icon">3</div>
+                    <h4>KNOWLEDGE</h4>
+                    <p>What do you know? (scope, expertise level)</p>
+                </div>
+                <div class="framework-card">
+                    <div class="icon">4</div>
+                    <h4>BOUNDARIES</h4>
+                    <p>What won't you do? (refusals, limits)</p>
+                </div>
+                <div class="framework-card">
+                    <div class="icon">5</div>
+                    <h4>FORMAT</h4>
+                    <p>How do you structure answers? (markdown, bullets, sections)</p>
+                </div>
+                <div class="framework-card">
+                    <div class="icon">6</div>
+                    <h4>PROCESS</h4>
+                    <p>How do you think? (step-by-step, debate both sides)</p>
+                </div>
+            </div>
+
+            <div class="example-box system">
+                <span class="label">COMPLETE SYSTEM PROMPT EXAMPLE</span>
+IDENTITY: You are a senior software architect with 15 years of experience in distributed systems. You specialize in Python, Go, and cloud infrastructure.
+
+TONE: Professional but approachable. Use analogies for complex concepts. Never be condescending.
+
+KNOWLEDGE: You have deep expertise in microservices, event-driven architecture, and database optimization. You stay current with AWS, Kubernetes, and modern DevOps practices.
+
+BOUNDARIES: You will not write production code without security considerations. You will flag potential risks. You will not recommend outdated technologies (pre-2020 unless specifically requested).
+
+FORMAT: Use headers for sections. Include code examples in fenced blocks. Summarize key takeaways in a "Key Points" box at the end.
+
+PROCESS: When asked for architecture advice, first ask clarifying questions about scale and constraints. Then present 2-3 options with tradeoffs. Never present only one solution.
+            </div>
+
+            <div class="tip">
+                <strong>Pro tip:</strong> Save your best system prompts as templates. Reuse them across conversations. Most pros have 5-10 "personas" they switch between.
+            </div>
+
+            <div class="nav-buttons">
+                <button class="btn btn-secondary" id="prev-1">Back</button>
+                <button class="btn" id="next-1">Next: Where to Put System Prompts</button>
+            </div>
+        </div>
+
+        <!-- STEP 3: Where to Put System Prompts -->
+        <div class="card hidden" id="card-2">
+            <h2>Step 3: Where to Put System Prompts</h2>
+            <p>Different platforms handle system prompts differently. Here's how to use them where you actually work.</p>
+
+            <div class="tab-container">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" data-tab="chatgpt">ChatGPT / Claude</button>
+                    <button class="tab-btn" data-tab="api">OpenAI API</button>
+                    <button class="tab-btn" data-tab="custom">Custom GPTs / Projects</button>
+                    <button class="tab-btn" data-tab="local">Local Models</button>
+                </div>
+
+                <div class="tab-content active" id="tab-chatgpt">
+                    <h3>ChatGPT, Claude, Gemini (Web Interfaces)</h3>
+                    <p>These don't have a separate "system" box. Instead, put your system instructions in the <strong>first message</strong> of the conversation.</p>
+                    <div class="example-box">
+                        <span class="label">CHATGPT / CLAUDE TECHNIQUE</span>
+Message 1 (your first message):
+"For this conversation, act as a marketing strategist who specializes in TikTok growth for small businesses. Always suggest 3 options. Use bullet points. Keep responses under 200 words. If I ask about pricing, mention that premium features exist but focus on free strategies first."
+
+Message 2+ (your actual questions):
+"How do I get my first 1000 followers?"
+"What hashtags should I use for a bakery?"
+                    </div>
+                    <div class="warning">
+                        <strong>Important:</strong> In web interfaces, the AI may "drift" from your instructions over long conversations. Re-paste key rules every 10-15 messages if needed.
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-api">
+                    <h3>OpenAI / Anthropic API</h3>
+                    <p>APIs have a dedicated <code>system</code> parameter. This is the <strong>cleanest</strong> way to use system prompts.</p>
+                    <div class="example-box">
+                        <span class="label">API STRUCTURE</span>
+{
+  "model": "gpt-4",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a concise technical writer. Never exceed 3 sentences per answer."
+    },
+    {
+      "role": "user", 
+      "content": "What is a API?"
+    }
+  ]
+}
+                    </div>
+                    <div class="tip">
+                        The system message is invisible to the end user but shapes every response. This is how apps like Jasper, Copy.ai, and coding assistants work behind the scenes.
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-custom">
+                    <h3>Custom GPTs (GPTs) & Claude Projects</h3>
+                    <p>These have a dedicated "Instructions" or "System Prompt" field. This is <strong>pure system prompt territory</strong>.</p>
+                    <div class="example-box">
+                        <span class="label">CUSTOM GPT INSTRUCTIONS FIELD</span>
+You are "CodeBuddy," a patient programming tutor for absolute beginners.
+
+RULES:
+- Explain concepts using cooking analogies
+- Never use jargon without defining it
+- If the user is stuck, ask what they tried before giving the answer
+- Celebrate small wins with encouraging emojis
+- Always provide a "Try It Yourself" challenge at the end
+
+KNOWLEDGE: Python, JavaScript, HTML/CSS. No backend frameworks.
+
+FORMAT: Use markdown. Code blocks must be copy-paste ready.
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-local">
+                    <h3>Local Models (Ollama, LM Studio, etc.)</h3>
+                    <p>Local tools usually have a "System Prompt" or "System Message" field in the settings. Some use special syntax.</p>
+                    <div class="example-box">
+                        <span class="label">OLLAMA EXAMPLE</span>
+ollama run llama3.1 "You are a creative writing coach. Give feedback on plot, character, and pacing. Be encouraging but honest."
+                    </div>
+                    <div class="example-box">
+                        <span class="label">LM STUDIO / TEXT GENERATION WEBUI</span>
+Look for "System Prompt" or "System Message" in the UI settings. Paste your instructions there. They persist for the entire session.
+                    </div>
+                </div>
+            </div>
+
+            <div class="nav-buttons">
+                <button class="btn btn-secondary" id="prev-2">Back</button>
+                <button class="btn" id="next-2">Next: Common System Prompt Patterns</button>
+            </div>
+        </div>
+
+        <!-- STEP 4: System Prompt Patterns -->
+        <div class="card hidden" id="card-3">
+            <h2>Step 4: Common System Prompt Patterns</h2>
+            <p>Here are 5 battle-tested system prompt templates you can copy and adapt.</p>
+
+            <h3>Pattern 1: The Expert Consultant</h3>
+            <div class="example-box system">
+                <span class="label">EXPERT CONSULTANT</span>
+You are a [FIELD] expert with [X] years of experience. Your advice is practical, not theoretical. You always consider budget and time constraints. When I describe a problem, you diagnose the root cause first, then prescribe 2-3 solutions ranked by effort vs. impact. You ask clarifying questions when information is missing. You never say "it depends" without explaining what it depends on.
+            </div>
+
+            <h3>Pattern 2: The Brutal Editor</h3>
+            <div class="example-box system">
+                <span class="label">BRUTAL EDITOR</span>
+You are a ruthless copyeditor. Your job is to make writing clearer, not nicer. You cut fluff without mercy. You flag weak verbs, passive voice, and jargon. You suggest stronger alternatives. You rewrite sentences when needed, but preserve the author's voice and intent. You explain every change so the author learns. You never say "this is good" — you always find something to improve.
+            </div>
+
+            <h3>Pattern 3: The Socratic Tutor</h3>
+            <div class="example-box system">
+                <span class="label">SOCRATIC TUTOR</span>
+You are a patient tutor who never gives direct answers. You guide students to discover answers through questions. You break complex topics into smaller questions. You celebrate correct reasoning. When a student is wrong, you ask a question that reveals the flaw in their thinking. You use analogies from everyday life. You adjust difficulty based on the student's responses.
+            </div>
+
+            <h3>Pattern 4: The Structured Output Machine</h3>
+            <div class="example-box system">
+                <span class="label">STRUCTURED OUTPUT</span>
+You are a data formatting assistant. Every response must follow this exact structure:
+
+**Summary:** One sentence overview.
+**Details:** 3-5 bullet points with specifics.
+**Action Items:** Numbered list of next steps.
+**Risks:** What could go wrong.
+**Resources:** Links or references (if applicable).
+
+Never deviate from this format. If information is missing for a section, write "N/A" rather than skipping it.
+            </div>
+
+            <h3>Pattern 5: The Devil's Advocate</h3>
+            <div class="example-box system">
+                <span class="label">DEVIL'S ADVOCATE</span>
+You are a critical thinker who challenges every idea presented to you. For any proposal, argument, or plan, you:
+1. Identify 3 potential weaknesses or risks
+2. Suggest 2 alternative approaches
+3. Point out what evidence would be needed to validate the original idea
+4. Note any assumptions being made
+
+You are not negative — you are thorough. You acknowledge strengths but focus on what could go wrong. You speak directly and concisely.
+            </div>
+
+            <div class="nav-buttons">
+                <button class="btn btn-secondary" id="prev-3">Back</button>
+                <button class="btn" id="next-3">Next: Specialized Prompting Intro</button>
+            </div>
+        </div>
+
+        <!-- STEP 5: Specialized Prompting Overview -->
+        <div class="card hidden" id="card-4">
+            <h2>Step 5: What Is Specialized Prompting?</h2>
+            <p>System prompts set the foundation. <strong>Specialized prompting</strong> is the advanced technique layer for specific domains — coding, creative writing, data analysis, legal work, etc.</p>
+
+            <div class="highlight">
+                <strong>The difference:</strong> System prompts = who the AI is. Specialized prompts = how the AI solves specific problem types in your field.
+            </div>
+
+            <p>Pick a specialty below to see domain-specific techniques:</p>
+
+            <div class="specialty-grid">
+                <div class="specialty-card" data-specialty="coding">
+                    <h4>💻 Coding & Development</h4>
+                    <p>Code review, debugging, architecture, testing</p>
+                </div>
+                <div class="specialty-card" data-specialty="creative">
+                    <h4>✍️ Creative Writing</h4>
+                    <p>Storytelling, character development, editing</p>
+                </div>
+                <div class="specialty-card" data-specialty="data">
+                    <h4>📊 Data Analysis</h4>
+                    <p>SQL, visualization, statistical reasoning</p>
+                </div>
+                <div class="specialty-card" data-specialty="business">
+                    <h4>💼 Business & Strategy</h4>
+                    <p>Marketing, finance, project management</p>
+                </div>
+                <div class="specialty-card" data-specialty="learning">
+                    <h4>🎓 Teaching & Learning</h4>
+                    <p>Lesson plans, explanations, assessments</p>
+                </div>
+                <div class="specialty-card" data-specialty="legal">
+                    <h4>⚖️ Legal & Compliance</h4>
+                    <p>Contract review, risk analysis, research</p>
+                </div>
+            </div>
+
+            <div class="tip">
+                <strong>How to use this section:</strong> Read through all specialties to understand the patterns. Then deep-dive into your main field. The techniques transfer between domains.
+            </div>
+
+            <div class="nav-buttons">
+                <button class="btn btn-secondary" id="prev-4">Back</button>
+                <button class="btn" id="next-4">Next: Coding Specialization</button>
+            </div>
+        </div>
+
+        <!-- STEP 6: Coding Specialization -->
+        <div class="card hidden" id="card-5">
+            <h2>Step 6: Coding & Development Prompting</h2>
+
+            <h3>Technique 1: The Code Review Prompt</h3>
+            <div class="example-box good">
+                <span class="label">CODE REVIEW</span>
+ROLE: Senior code reviewer. Focus on security, performance, and maintainability.
+
+TASK: Review this [LANGUAGE] code for:
+1. Security vulnerabilities (SQL injection, XSS, buffer overflow risks)
+2. Performance bottlenecks (unnecessary loops, inefficient data structures)
+3. Code smells (magic numbers, deep nesting, duplicated logic)
+4. Test coverage gaps
+
+FORMAT: For each issue, provide:
+- Line number(s)
+- Severity: Critical / Warning / Suggestion
+- Explanation of the risk
+- Refactored code example
+- Why the fix is better
+
+CONSTRAINTS: Do not suggest libraries I haven't imported. Keep explanations under 2 sentences each.
+            </div>
+
+            <h3>Technique 2: The Debugging Prompt</h3>
+            <div class="example-box good">
+                <span class="label">DEBUGGING</span>
+You are a debugging specialist. I will describe a bug. Your process:
+
+1. HYPOTHESIS: List 3 most likely causes ranked by probability
+2. ISOLATION: Suggest the smallest code change to test each hypothesis
+3. ROOT CAUSE: Once I tell you which test failed, identify the exact root cause
+4. FIX: Provide the minimal code fix
+5. PREVENTION: Suggest a test or linter rule to catch this in the future
+
+Current bug: [describe error message, expected vs actual behavior, and relevant code]
+            </div>
+
+            <h3>Technique 3: Architecture Decision Prompt</h3>
+            <div class="example-box good">
+                <span class="label">ARCHITECTURE</span>
+You are a system architect. I need to choose a tech stack for [PROJECT DESCRIPTION].
+
+Constraints: [budget, team size, scale, existing tech, timeline]
+
+Provide 3 architecture options:
+- Option A: Conservative (proven, low risk)
+- Option B: Balanced (modern but stable)
+- Option C: Aggressive (cutting edge, higher risk)
+
+For each option, include:
+- Recommended stack with specific library/framework names
+- Pros and cons
+- When this option is the right choice
+- Hidden costs or risks most people miss
+- Migration path if we need to change later
+            </div>
+
+            <div class="nav-buttons">
+                <button class="btn btn-secondary" id="prev-5">Back</button>
+                <button class="btn" id="next-5">Next: Creative & Data</button>
+            </div>
+        </div>
+
+        <!-- STEP 7: Creative & Data Specializations -->
+        <div class="card hidden" id="card-6">
+            <h2>Step 7: Creative Writing & Data Analysis</h2>
+
+            <h3>Creative Writing: The Story Engine</h3>
+            <div class="example-box good">
+                <span class="label">STORY ENGINE</span>
+You are a fiction writing coach. I will give you story concepts. For each:
+
+1. HOOK: Identify the strongest opening sentence/paragraph
+2. CONFLICT: Name the internal and external conflicts
+3. CHARACTER ARC: Describe the protagonist's transformation
+4. PACING: Flag where the story might drag or rush
+5. DIALOGUE: Suggest 2 lines of dialogue that reveal character
+6. TWIST: Propose an unexpected but fair plot turn
+
+TONE: Encouraging but honest. Use examples from published works to illustrate points. Never rewrite my story — only guide me to improve it.
+            </div>
+
+            <h3>Data Analysis: The Insight Extractor</h3>
+            <div class="example-box good">
+                <span class="label">INSIGHT EXTRACTOR</span>
+You are a data analyst who turns numbers into business stories. When I share data:
+
+1. PATTERN: What trend or pattern do you see? (State confidence level: High/Medium/Low)
+2. SO WHAT: Why does this pattern matter to the business?
+3. COMPARISON: How does this compare to industry benchmarks or historical data?
+4. CAUSE: What are the 2 most likely drivers of this pattern?
+5. ACTION: What should we do? Provide 2 options: one quick win, one strategic play
+6. RISK: What could make this insight wrong? What data is missing?
+
+RULES: Never say "the data shows" without saying what it shows. Always quantify ("increased by 23%" not "increased significantly"). If you can't answer a section, say "Insufficient data" and tell me what I need to provide.
+            </div>
+
+            <h3>Business: The Strategy Synthesizer</h3>
+            <div class="example-box good">
+                <span class="label">STRATEGY SYNTHESIZER</span>
+You are a business strategist. I will describe a business challenge.
+
+Your framework:
+1. SITUATION: Summarize the core problem in one sentence
+2. OPTIONS: Generate 4 strategies (2 obvious, 2 creative/unconventional)
+3. CRITERIA: Score each option on: Cost, Speed, Risk, Impact (1-5 scale)
+4. RECOMMENDATION: Pick the best option and explain why
+5. EXECUTION: Break the recommendation into 3 phases with milestones
+6. METRICS: What KPIs tell us if this is working?
+
+CONSTRAINTS: Assume limited budget unless told otherwise. Flag any option that requires skills/resources the team likely doesn't have.
+            </div>
+
+            <div class="nav-buttons">
+                <button class="btn btn-secondary" id="prev-6">Back</button>
+                <button class="btn" id="next-6">Next: Advanced Techniques</button>
+            </div>
+        </div>
+
+        <!-- STEP 8: Advanced Techniques -->
+        <div class="card hidden" id="card-7">
+            <h2>Step 8: Advanced Cross-Domain Techniques</h2>
+            <p>These techniques work across <strong>all</strong> specializations. Master these and your prompts become significantly more powerful.</p>
+
+            <h3>Technique 1: Few-Shot Prompting</h3>
+            <p>Show the AI 2-3 examples of exactly what you want, then ask for more.</p>
+            <div class="example-box">
+                <span class="label">FEW-SHOT EXAMPLE</span>
+Rewrite these product descriptions to be punchier and more emotional.
+
+Example 1:
+Before: "Our blender has a 1200 watt motor and stainless steel blades."
+After: "Crush ice in 8 seconds flat. This 1200-watt beast turns frozen fruit into silk."
+
+Example 2:
+Before: "The jacket is waterproof and has 4 pockets."
+After: "Stay dry in a downpour. Four pockets mean your phone, keys, wallet, and snacks all have a home."
+
+Now rewrite:
+Before: "Our software automates invoice processing and reduces errors."
+After:
+            </div>
+
+            <h3>Technique 2: Chain-of-Thought</h3>
+            <p>Force the AI to show its reasoning before giving the final answer.</p>
+            <div class="example-box">
+                <span class="label">CHAIN-OF-THOUGHT</span>
+Solve this step by step. First, identify what type of problem this is. Second, list the relevant formulas or principles. Third, apply them one at a time. Fourth, check your work. Finally, present the answer.
+
+Problem: [your problem here]
+            </div>
+
+            <h3>Technique 3: Persona Layering</h3>
+            <p>Stack multiple personas for complex tasks.</p>
+            <div class="example-box">
+                <span class="label">PERSONA LAYERING</span>
+You are a team of 3 experts collaborating:
+
+- Alex (Data Scientist): Focuses on statistical validity, data quality, and methodology
+- Blake (Product Manager): Focuses on user impact, feasibility, and business value
+- Casey (Designer): Focuses on user experience, clarity, and visual presentation
+
+For my request, each expert contributes their perspective. Then you synthesize into one recommendation that balances all three viewpoints. Flag any conflicts between perspectives.
+            </div>
+
+            <h3>Technique 4: Constraint Stacking</h3>
+            <p>Add multiple, sometimes contradictory constraints to force creative solutions.</p>
+            <div class="example-box">
+                <span class="label">CONSTRAINT STACKING</span>
+Design a marketing campaign with these constraints:
+- Budget: $0 (must be organic/viral)
+- Time: Must launch in 48 hours
+- Audience: Must reach people who hate ads
+- Format: Must be shareable without explanation
+- Risk: Cannot use any trending hashtag or meme format
+
+The constraints seem impossible. That's the point. Find the loophole.
+            </div>
+
+            <h3>Technique 5: Meta-Prompting</h3>
+            <p>Ask the AI to improve your prompt before answering.</p>
+            <div class="example-box">
+                <span class="label">META-PROMPTING</span>
+I want to ask you to [brief description of task]. 
+
+Before you answer, do this:
+1. Identify what's ambiguous or missing in my request
+2. Suggest 2-3 ways to make my prompt more specific
+3. Ask me which approach I prefer
+4. Only then, answer using the refined prompt
+            </div>
+
+            <div class="highlight">
+                <strong>Final advice:</strong> The best prompt engineers aren't those who memorize techniques — they're those who know which technique to apply to which problem. Practice switching between them.
+            </div>
+
+            <div class="nav-buttons">
+                <button class="btn btn-secondary" id="prev-7">Back</button>
+                <button class="btn" id="restart">Start Over</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+(function() {
+    'use strict';
+
+    var currentStep = 0;
+    var totalSteps = 8;
+
+    function showStep(stepNum) {
+        for (var i = 0; i < totalSteps; i++) {
+            document.getElementById('card-' + i).classList.add('hidden');
+        }
+        document.getElementById('card-' + stepNum).classList.remove('hidden');
+
+        var dots = document.querySelectorAll('.step-dot');
+        for (var j = 0; j < dots.length; j++) {
+            dots[j].classList.remove('active', 'completed');
+            if (j < stepNum) {
+                dots[j].classList.add('completed');
+            } else if (j === stepNum) {
+                dots[j].classList.add('active');
+            }
+        }
+
+        currentStep = stepNum;
+        window.scrollTo(0, 0);
+    }
+
+    function nextStep() {
+        if (currentStep < totalSteps - 1) {
+            showStep(currentStep + 1);
+        }
+    }
+
+    function prevStep() {
+        if (currentStep > 0) {
+            showStep(currentStep - 1);
+        }
+    }
+
+    // Step dots
+    var dots = document.querySelectorAll('.step-dot');
+    for (var d = 0; d < dots.length; d++) {
+        dots[d].addEventListener('click', (function(step) {
+            return function() { showStep(step); };
+        })(parseInt(dots[d].getAttribute('data-step'))));
+    }
+
+    // Next buttons
+    for (var n = 0; n < totalSteps - 1; n++) {
+        var nextBtn = document.getElementById('next-' + n);
+        if (nextBtn) {
+            nextBtn.addEventListener('click', nextStep);
+        }
+    }
+
+    // Prev buttons
+    for (var p = 1; p < totalSteps; p++) {
+        var prevBtn = document.getElementById('prev-' + p);
+        if (prevBtn) {
+            prevBtn.addEventListener('click', prevStep);
+        }
+    }
+
+    // Restart
+    document.getElementById('restart').addEventListener('click', function() {
+        showStep(0);
+    });
+
+    // Tab system
+    var tabBtns = document.querySelectorAll('.tab-btn');
+    for (var t = 0; t < tabBtns.length; t++) {
+        tabBtns[t].addEventListener('click', function() {
+            var tabId = this.getAttribute('data-tab');
+
+            // Deactivate all tabs
+            var allBtns = document.querySelectorAll('.tab-btn');
+            for (var b = 0; b < allBtns.length; b++) {
+                allBtns[b].classList.remove('active');
+            }
+            var allContents = document.querySelectorAll('.tab-content');
+            for (var c = 0; c < allContents.length; c++) {
+                allContents[c].classList.remove('active');
+            }
+
+            // Activate clicked tab
+            this.classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+        });
+    }
+
+    // Specialty cards
+    var specCards = document.querySelectorAll('.specialty-card');
+    for (var s = 0; s < specCards.length; s++) {
+        specCards[s].addEventListener('click', function() {
+            for (var sc = 0; sc < specCards.length; sc++) {
+                specCards[sc].classList.remove('active');
+            }
+            this.classList.add('active');
+        });
+    }
+
+    // Checklist items
+    var checkItems = document.querySelectorAll('.check-item');
+    for (var ci = 0; ci < checkItems.length; ci++) {
+        checkItems[ci].addEventListener('click', function() {
+            this.classList.toggle('checked');
+        });
+    }
+
+})();
+</script>
+</body>
+</html>
