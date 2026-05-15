@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HTML Basics Interactive Learning App</title>
+<style>
+  :root {
+    --color-bg: #f8fafc;
+    --color-surface: #ffffff;
+    --color-text: #0f172a;
+    --color-text-secondary: #475569;
+    --color-primary: #1e40af;
+    --color-primary-light: #3b82f6;
+    --color-accent: #d97706;
+    --color-accent-light: #fbbf24;
+    --color-success: #15803d;
+    --color-error: #b91c1c;
+    --color-border: #cbd5e1;
+    --radius: 12px;
+    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--color-bg);
+    color: var(--color-text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--color-primary);
+    color: white;
+    padding: 2rem 1rem;
+    text-align: center;
+  }
+  header h1 { font-size: 1.75rem; margin-bottom: 0.5rem; }
+  header p { font-size: 1.1rem; opacity: 0.9; }
+
+  nav {
+    display: flex;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: var(--color-surface);
+    border-bottom: 2px solid var(--color-border);
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  nav button {
+    padding: 0.75rem 1.25rem;
+    border: 2px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s;
+    min-height: 44px;
+  }
+  nav button:hover {
+    border-color: var(--color-primary-light);
+    color: var(--color-primary);
+  }
+  nav button.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+  }
+  nav button:focus-visible {
+    outline: 3px solid var(--color-primary-light);
+    outline-offset: 2px;
+  }
+
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem;
+  }
+  .chapter-panel {
+    display: none;
+  }
+  .chapter-panel.active {
+    display: block;
+    animation: fadeIn 0.4s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .explanation {
+    background: var(--color-surface);
+    padding: 1.5rem;
+    border-radius: var(--radius);
+    border-left: 5px solid var(--color-primary);
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow);
+    font-size: 1.05rem;
+  }
+  .explanation h2 {
+    font-size: 1.4rem;
+    margin-bottom: 0.75rem;
+    color: var(--color-primary);
+  }
+
+  .mindmap-interface {
+    background: var(--color-surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 65vh;
+    min-height: 500px;
+    max-height: 800px;
+  }
+  .progress-counter {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: var(--color-surface);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    border: 2px solid var(--color-border);
+    z-index: 10;
+    box-shadow: var(--shadow);
+  }
+  .progress-counter.complete {
+    color: var(--color-success);
+    border-color: var(--color-success);
+    background: #f0fdf4;
+  }
+  .mindmap-wrapper {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .mindmap-container {
+    flex: 1;
+    position: relative;
+    overflow: auto;
+    background: #f1f5f9;
+    cursor: grab;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mindmap-container:active {
+    cursor: grabbing;
+  }
+  .connections {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .nodes-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+  }
+
+  .mind-node {
+    position: absolute;
+    width: 160px;
+    min-height: 70px;
+    background: white;
+    border: 2px solid var(--color-border);
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow);
+    z-index: 3;
+    font-size: 0.9rem;
+    animation: nodeEnter 0.35s ease-out;
+  }
+  @keyframes nodeEnter {
+    from { opacity: 0; transform: scale(0.9) translateY(-8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .mind-node:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--color-primary-light);
+  }
+  .mind-node:focus-visible {
+    outline: 3px solid var(--color-primary-light);
+    outline-offset: 2px;
+  }
+  .mind-node.root {
+    background: var(--color-primary);
+    color: white;
+    border-color: #1e3a8a;
+    font-weight: 700;
+    font-size: 1rem;
+    width: 180px;
+    min-height: 80px;
+    animation: rootPulse 2s infinite;
+  }
+  @keyframes rootPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+    50% { box-shadow: 0 0 0 12px rgba(37, 99, 235, 0); }
+  }
+  .mind-node.question {
+    background: #fffbeb;
+    border-color: var(--color-accent-light);
+    color: #92400e;
+  }
+  .mind-node.correct {
+    background: #f0fdf4;
+    border-color: #86efac;
+    color: var(--color-success);
+  }
+  .mind-node.incorrect {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: var(--color-error);
+  }
+  .mind-node.active {
+    outline: 3px solid var(--color-primary-light);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.15);
+  }
+  .node-label {
+    font-weight: 600;
+    line-height: 1.3;
+    pointer-events: none;
+  }
+  .badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 22px;
+    height: 22px;
+    background: var(--color-accent);
+    color: white;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+  }
+  .expand-icon {
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 20px;
+    background: var(--color-surface);
+    border: 2px solid var(--color-border);
+    border-radius: 50%;
+    font-size: 14px;
+    line-height: 16px;
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mind-node.root .expand-icon {
+    background: var(--color-primary);
+    color: white;
+    border-color: #1e3a8a;
+  }
+
+  .detail-panel {
+    padding: 1.5rem;
+    background: white;
+    border-top: 2px solid var(--color-border);
+    min-height: 140px;
+    max-height: 30vh;
+    overflow-y: auto;
+    z-index: 4;
+  }
+  .detail-panel h3 {
+    font-size: 1.2rem;
+    color: var(--color-primary);
+    margin-bottom: 0.5rem;
+  }
+  .detail-panel p {
+    color: var(--color-text-secondary);
+    margin-bottom: 1rem;
+  }
+  .detail-panel .hint {
+    color: var(--color-primary);
+    font-style: italic;
+    margin-top: 0.5rem;
+  }
+  .question-form {
+    margin-top: 0.5rem;
+  }
+  .q-prompt {
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 0.75rem;
+  }
+  .mc-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .option-btn {
+    padding: 0.6rem 1rem;
+    border: 2px solid var(--color-border);
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    text-align: left;
+    min-height: 44px;
+  }
+  .option-btn:hover {
+    border-color: var(--color-primary-light);
+    background: #eff6ff;
+  }
+  .option-btn.selected {
+    border-color: var(--color-primary);
+    background: #eff6ff;
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+  .option-btn.correct {
+    border-color: var(--color-success);
+    background: #f0fdf4;
+    color: var(--color-success);
+  }
+  .option-btn.wrong {
+    border-color: var(--color-error);
+    background: #fef2f2;
+    color: var(--color-error);
+  }
+  .short-answer {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  .short-answer input {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.6rem 0.8rem;
+    border: 2px solid var(--color-border);
+    border-radius: 8px;
+    font-size: 1rem;
+    min-height: 44px;
+  }
+  .short-answer input:focus-visible {
+    outline: 3px solid var(--color-primary-light);
+    border-color: var(--color-primary);
+  }
+  .submit-btn, .retry-btn, .reset-btn {
+    padding: 0.6rem 1.2rem;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    min-height: 44px;
+  }
+  .submit-btn:hover, .retry-btn:hover, .reset-btn:hover {
+    background: #1e3a8a;
+  }
+  .feedback {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 0.5rem;
+    animation: slideIn 0.3s ease;
+  }
+  .feedback.correct {
+    background: #f0fdf4;
+    border: 2px solid #86efac;
+    color: var(--color-success);
+  }
+  .feedback.incorrect {
+    background: #fef2f2;
+    border: 2px solid #fecaca;
+    color: var(--color-error);
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .hint-area {
+    color: var(--color-accent);
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    min-height: 1.5rem;
+  }
+
+  @media (max-width: 640px) {
+    header h1 { font-size: 1.4rem; }
+    nav button { font-size: 0.9rem; padding: 0.6rem 1rem; }
+    .mindmap-interface { height: 70vh; min-height: 450px; }
+    .mind-node { width: 140px; min-height: 60px; font-size: 0.85rem; }
+    .mind-node.root { width: 150px; min-height: 70px; }
+    .detail-panel { padding: 1rem; max-height: 35vh; }
+    .mc-options { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<<header>
+  <h1>HTML Basics Learning App</h1>
+  <p>Your interactive guide to building web pages — no experience needed!</p>
+</header>
+
+<<nav role="tablist" aria-label="Chapters">
+  <button role="tab" id="tab1" aria-controls="ch1" aria-selected="true" tabindex="0" class="active">1. Document Structure</button>
+  <button role="tab" id="tab2" aria-controls="ch2" aria-selected="false" tabindex="-1">2. Basic Content</button>
+  <button role="tab" id="tab3" aria-controls="ch3" aria-selected="false" tabindex="-1">3. Organising Content</button>
+</nav>
+
+<<main>
+  <section id="ch1" class="chapter-panel active" role="tabpanel" aria-labelledby="tab1">
+    <div class="explanation">
+      <h2>HTML Document Structure</h2>
+      <p>Every HTML page is like a house. It needs a solid foundation (DOCTYPE), walls and roof (&lt;html&gt;), a hidden utility room (&lt;head&gt;) with instructions for the browser, and a living room (&lt;body&gt;) where all your furniture (content) goes. Let's explore each room!</p>
+    </div>
+    <div class="mindmap-interface">
+      <div class="mindmap-wrapper">
+        <div class="progress-counter" id="progress1" aria-live="polite" aria-atomic="true">0 of 5 questions answered correctly</div>
+        <button class="reset-btn" style="position:absolute;top:12px;left:12px;z-index:10;padding:0.4rem 0.8rem;font-size:0.8rem;" onclick="resetChapter(0)">Reset Chapter</button>
+        <div class="mindmap-container" id="map1">
+          <svg class="connections" aria-hidden="true"></svg>
+          <div class="nodes-layer"></div>
+        </div>
+        <div class="detail-panel" id="detail1" aria-live="polite">
+          <p>Click the blue <strong>HTML Document</strong> card above to start exploring!</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="ch2" class="chapter-panel" role="tabpanel" aria-labelledby="tab2" hidden>
+    <div class="explanation">
+      <h2>Basic Content Elements</h2>
+      <p>Now that we have our house built, let's fill it with content! Headings create a clear outline, paragraphs hold your text, links connect to other pages, images add visuals, and a few special tags help with spacing. Think of these as your basic decorating tools.</p>
+    </div>
+    <div class="mindmap-interface">
+      <div class="mindmap-wrapper">
+        <div class="progress-counter" id="progress2" aria-live="polite" aria-atomic="true">0 of 5 questions answered correctly</div>
+        <button class="reset-btn" style="position:absolute;top:12px;left:12px;z-index:10;padding:0.4rem 0.8rem;font-size:0.8rem;" onclick="resetChapter(1)">Reset Chapter</button>
+        <div class="mindmap-container" id="map2">
+          <svg class="connections" aria-hidden="true"></svg>
+          <div class="nodes-layer"></div>
+        </div>
+        <div class="detail-panel" id="detail2" aria-live="polite">
+          <p>Click the blue <strong>Content Elements</strong> card above to start exploring!</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="ch3" class="chapter-panel" role="tabpanel" aria-labelledby="tab3" hidden>
+    <div class="explanation">
+      <h2>Organising Content</h2>
+      <p>Sometimes you need to organize information neatly — like a grocery list, a dictionary, or a spreadsheet. HTML gives you three powerful tools: lists for grouped items, description lists for terms and definitions, and tables for rows and columns of data.</p>
+    </div>
+    <div class="mindmap-interface">
+      <div class="mindmap-wrapper">
+        <div class="progress-counter" id="progress3" aria-live="polite" aria-atomic="true">0 of 5 questions answered correctly</div>
+        <button class="reset-btn" style="position:absolute;top:12px;left:12px;z-index:10;padding:0.4rem 0.8rem;font-size:0.8rem;" onclick="resetChapter(2)">Reset Chapter</button>
+        <div class="mindmap-container" id="map3">
+          <svg class="connections" aria-hidden="true"></svg>
+          <div class="nodes-layer"></div>
+        </div>
+        <div class="detail-panel" id="detail3" aria-live="polite">
+          <p>Click the blue <strong>Organising Content</strong> card above to start exploring!</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+  const SIBLING_GAP = 30;
+  const LEVEL_GAP = 130;
+  const activeNodeIds = [null, null, null];
+
+  const chapters = [
+    {
+      id: 'ch1',
+      title: 'HTML Document Structure',
+      rendered: false,
+      root: {
+        id: 'root1',
+        label: 'HTML Document',
+        type: 'root',
+        expanded: false,
+        content: 'The complete blueprint of a web page. Click the branches to explore each part!',
+        children: [
+          {
+            id: 'doctype',
+            label: 'DOCTYPE',
+            type: 'concept',
+            expanded: false,
+            content: 'The very first line of your file. It tells the browser: "This is a modern HTML5 page!" Without it, browsers might get confused and render your page oddly.',
+            children: [
+              {
+                id: 'doctype-syntax',
+                label: 'Syntax',
+                type: 'concept',
+                expanded: false,
+                content: '<!DOCTYPE html> — That\'s it! No closing tag needed. Always place it at the absolute top, before anything else.'
+              },
+              {
+                id: 'doctype-q1',
+                label: 'Quiz: Purpose',
+                type: 'question',
+                expanded: false,
+                content: 'Test your knowledge about DOCTYPE.',
+                questionData: {
+                  type: 'mc',
+                  prompt: 'What does <!DOCTYPE html> do?',
+                  options: ['Makes text colorful', 'Tells the browser it\'s HTML5', 'Creates a big heading'],
+                  correctAnswer: 1,
+                  hint: 'Think about the word "type" — it declares the document type!',
+                  explanation: 'Correct! DOCTYPE tells the browser to use HTML5 rules when rendering the page.'
+                }
+              },
+              {
+                id: 'doctype-q2',
+                label: 'Quiz: Position',
+                type: 'question',
+                expanded: false,
+                content: 'Where should DOCTYPE live?',
+                questionData: {
+                  type: 'mc',
+                  prompt: 'Where does <!DOCTYPE html> appear?',
+                  options: ['At the bottom of the file', 'In the middle', 'At the very top'],
+                  correctAnswer: 2,
+                  hint: 'It\'s the first thing the browser reads.',
+                  explanation: 'Yes! DOCTYPE must be the very first line, before anything else.'
+                }
+              }
+            ]
+          },
+          {
+            id: 'html-tag',
+            label: '<html>',
+            type: 'concept',
+            expanded: false,
+            content: 'The root element — like the outer walls of a house. Every other tag must live inside this wrapper.',
+            children: [
+              {
+                id: 'html-lang',
+                label: 'lang attribute',
+                type: 'concept',
+                expanded: false,
+                content: 'Add lang="en" (or your language code) so screen readers know how to pronounce words correctly. It also helps search engines!'
+              }
+            ]
+          },
+          {
+            id: 'head',
+            label: '<head>',
+            type: 'concept',
+            expanded: false,
+            content: 'The "behind the scenes" area. Everything here is invisible to visitors but crucial for browsers, search engines, and social media.',
+            children: [
+              {
+                id: 'head-title',
+                label: '<title>',
+                type: 'concept',
+                expanded: false,
+                content: 'Sets the text on the browser tab. Also used when someone bookmarks your page or shares it on social media. Very important!'
+              },
+              {
+                id: 'head-charset',
+                label: 'meta charset',
+                type: 'concept',
+                expanded: false,
+                content: '<meta charset="UTF-8"> lets the browser display letters, symbols, and even emojis correctly. Always include it!'
+              },
+              {
+                id: 'head-viewport',
+                label: 'meta viewport',
+                type: 'concept',
+                expanded: false,
+                content: '<meta name="viewport" content="width=device-width, initial-scale=1.0"> makes your page responsive — it looks great on phones, tablets, and desktops!'
+              },
+              {
+                id: 'head-q1',
+                label: 'Quiz: Viewport',
+                type: 'question',
+                expanded: false,
+                content: 'Do you remember the mobile meta tag?',
+                questionData: {
+                  type: 'short',
+                  prompt: 'Which meta tag helps mobile phones display your page correctly? (enter one word)',
+                  acceptedAnswers: ['viewport'],
+                  hint: 'It has the word "view" in it and controls how the screen "ports" content.',
+                  explanation: 'Correct! The viewport meta tag ensures your page scales nicely on any device.'
+                }
+              },
+              {
+                id: 'head-q2',
+                label: 'Quiz: Title',
+                type: 'question',
+                expanded: false,
+                content: 'Where does the title tag belong?',
+                questionData: {
+                  type: 'mc',
+                  prompt: 'Where does the <title> tag go?',
+                  options: ['Inside <body>', 'Inside <head>', 'After </html>'],
+                  correctAnswer: 1,
+                  hint: 'The title doesn\'t show ON the page — it shows IN the browser tab.',
+                  explanation: 'Right! The title lives in the <head> section.'
+                }
+              }
+            ]
+          },
+          {
+            id: 'body',
+            label: '<body>',
+            type: 'concept',
+            expanded: false,
+            content: 'The living room of your page. Everything inside here is what users actually see, read, and interact with.',
+            children: [
+              {
+                id: 'body-visible',
+                label: 'Visible Content',
+                type: 'concept',
+                expanded: false,
+                content: 'Headings, paragraphs, images, links, videos, buttons — all the good stuff that makes your page useful and beautiful goes here.'
+              },
+              {
+                id: 'body-one',
+                label: 'One Only',
+                type: 'concept',
+                expanded: false,
+                content: 'A page should have exactly one <body> tag. Not zero, not two — just one! Having more confuses the browser.'
+              },
+              {
+                id: 'body-q1',
+                label: 'Quiz: Body Count',
+                type: 'question',
+                expanded: false,
+                content: 'How many body tags do you need?',
+                questionData: {
+                  type: 'mc',
+                  prompt: 'How many <body> tags should a valid HTML page have?',
+                  options: ['As many as you want', 'Exactly one', 'Zero — it\'s optional'],
+                  correctAnswer: 1,
+                  hint: 'Think of a body as... well, a body. You only have one!',
+                  explanation: 'Exactly! Every HTML page needs one (and only one) body to hold all visible content.'
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      id: 'ch2',
+      title: 'Basic Content Elements',
+      rendered: false,
+      root: {
+        id: 'root2',
+        label: 'Content Elements',
+        type: 'root',
+        expanded: false,
+        content: 'The essential tags for adding text, links, and media to your page. Click to explore each family!',
+        children: [
+          {
+            id: 'headings',
+            label: 'Headings h1–h6',
+            type: 'concept',
+            expanded: false,
+            content: 'Headings create an outline for your page. h1 is the most important (like a book title), and h6 is the least important.',
+            children: [
+              {
+                id: 'headings-h1',
+                label: '<h1> is King',
+                type: 'concept',
+                expanded: false,
+                content: 'There should generally be only one h1 per page. It tells search engines: "This is what this page is about!"'
+              },
+              {
+                id: 'headings-h6',
+                label: '<h6> is Small',
+                type: 'concept',
+                expanded: false,
+                content: 'h6 is the tiniest heading. Use it for sub-sub-sub sections. Most pages never need to go past h3 or h4.'
+              },
+              {
+                id: 'headings-q1',
+                label: 'Quiz: Biggest',
+                type: 'question',
+                expanded: false,
+                content: 'Which heading stands tallest?',
+                questionData: {
+                  type: 'mc',
+                  prompt: 'Which is the biggest and most important heading?',
+                  options: ['<<h6>', '<h1>', '<h3>'],
+                  correctAnswer: 1,
+                  hint: 'The number 1 means first and most important!',
+                  explanation: 'Correct! h1 is the biggest heading and should describe the main topic of the page.'
+                }
+              }
+            ]
+          },
+          {
+            id: 'paragraphs',
+            label: 'Paragraphs <p>',
+            type: 'concept',
+            expanded: false,
+            content: 'The <p> tag wraps blocks of text. Browsers automatically add a little space above and below paragraphs to make reading easier.',
+            children: [
+              {
+                id: 'p-block',
+                label: 'Block Element',
+                type: 'concept',
+                expanded: false,
+                content: 'A paragraph is a "block-level" element, meaning it takes up the full width available and starts on a new line.'
+              }
+            ]
+          },
+          {
+            id: 'links',
+            label: 'Links <a>',
+            type: 'concept',
+            expanded: false,
+            content: 'The anchor tag creates hyperlinks — the magic that makes the web a web! Clickable text that jumps to another page, file, or email.',
+            children: [
+              {
+                id: 'a-href',
+                label: 'href attribute',
+                type: 'concept',
+                expanded: false,
+                content: 'href stands for "hypertext reference." It holds the URL or destination. Without it, your link goes nowhere!'
+              },
+              {
+                id: 'a-target',
+                label: 'target="_blank"',
+                type: 'concept',
+                expanded: false,
+                content: 'Adding target="_blank" opens the link in a new tab. Great for external links, but always warn users!'
+              },
+              {
+                id: 'links-q1',
+                label: 'Quiz: Attribute',
+                type: 'question',
+                expanded: false,
+                content: 'What makes a link actually work?',
+                questionData: {
+                  type: 'mc',
+                  prompt: 'What attribute does <a> need to make a real link?',
+                  options: ['src', 'href', 'link'],
+                  correctAnswer: 1,
+                  hint: 'It starts with "h" and stands for "hypertext reference."',
+                  explanation: 'Correct! The href attribute tells the browser where to go when the link is clicked.'
+                }
+              }
+            ]
+          },
+          {
+            id: 'images',
+            label: 'Images <img>',
+            type: 'concept',
+            expanded: false,
+            content: 'Images make pages visual and engaging. The img tag pulls in pictures from a file path or URL.',
+            children: [
+              {
+                id: 'img-src',
+                label: 'src attribute',
+                type: 'concept',
+                expanded: false,
+                content: 'src stands for "source." It tells the browser where to find the image file, like src="photo.jpg" or a full URL.'
+              },
+              {
+                id: 'img-alt',
+                label: 'alt attribute',
+                type: 'concept',
+                expanded: false,
+                content: 'alt provides a text description of the image. Essential for screen readers, and displayed if the image fails to load.'
+              },
+              {
+                id: 'img-self',
+                label: 'Self-Closing',
+                type: 'concept',
+                expanded: false,
+                content: '<img> has no closing tag! It\'s self-closing because it doesn\'t wrap any content — it pulls in external content.'
+              },
+              {
+                id: 'images-q1',
+                label: 'Quiz: Self-Closing',
+                type: 'question',
+                expanded: false,
+                content: 'Which tag doesn\'t need a closing partner?',
+                questionData: {
+                  type: 'mc',
+                  prompt: 'Which of these tags is self-closing?',
+                  options: ['<<p>', '<img>', '<a>'],
+                  correctAnswer: 1,
+                  hint: 'Images don\'t wrap text content — they pull in an external file.',
+                  explanation: 'Right! <img> is self-closing. It has no </img> partner.'
+                }
+              },
+              {
+                id: 'images-q2',
+                label: 'Quiz: Alt Text',
+                type: 'question',
+                expanded: false,
+                content: 'Accessibility matters!',
+                questionData: {
+                  type: 'short',
+                  prompt: 'What attribute describes an image for screen readers? (one word)',
+                  acceptedAnswers: ['alt'],
+                  hint: 'It\'s short for "alternative text."',
+                  explanation: 'Correct! The alt attribute ensures everyone, including visually impaired users, understands your images.'
+                }
+              }
+            ]
+          },
+          {
+            id: 'breaks',
+            label: 'Line Breaks <br>',
+            type: 'concept',
+            expanded: false,
+            content: '<br> inserts a single line break. Use it for addresses or poems, but not for creating space between paragraphs — use CSS for that!',
+            children: [
+              {
+                id: 'breaks-q1',
+                label: 'Quiz: Purpose',
+                type: 'question',
+                expanded: false,
+                content: 'What does br actually do?',
+                questionData: {
+                  type: 'mc',
+                  prompt: 'What does <br> do?',
+                  options: ['Breaks the whole page', 'Adds a single line break', 'Makes text bold'],
+                  correctAnswer: 1,
+                  hint: 'It\'s a "break" — but just a line break, not a page break!',
+                  explanation: 'Correct! <br> moves the following text to the next line.'
+                }
+              }
+            ]
+          },
+          {
+            id: 'rules',
+            label: 'Horizontal Rules <hr>',
+            type: 'concept',
+            expanded: false,
+            content: '<hr> creates a horizontal line across the page. It represents a "thematic break" — a shift in topic or section.',
+            children: [
+              {
+                id: 'hr-visual',
+                label: 'Visual Separator',
+                type: 'concept',
+                expanded: false,
+                content: 'While it looks like a simple line, semantically it means: "What follows is a different theme or topic."'
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      id: 'ch3',
+      title: 'Organising Content',
+      rendered: false,
+      root: {
+        id: 'root3',
+        label: 'Organising Content',
+        type: 'root',
+        expanded: false,
+        content: 'Three ways to structure related information: lists, description lists, and tables. Click to see how each works!',
+        children: [
+          {
+            id: 'lists',
+            label: 'Lists',
+            type: 'concept',
+            expanded: false,
+            content: 'Lists group related items together. You have two main flavors: bullets for unordered items, and numbers for ordered sequences.',
+            children: [
+              {
+                id: 'lists-ul',
+                label: '<ul> Unordered',
+                type: 'concept',
+                expanded: false,
+                content: 'Use <ul> when the order doesn\'t matter: shopping lists, feature lists, navigation menus. Each item gets a bullet point.'
+              },
+              {
+                id: 'lists-ol',
+                label: '<ol> Ordered',
+                type: 'concept',
+                expanded: false,
+                content: 'Use <ol> when sequence matters: recipes, rankings, step-by-step instructions. Each item gets a number automatically.'
+              },
+              {
+                id: 'lists-li',
+                label: '<li> List Item',
+                type: 'concept',
+                expanded: false,
+                content: 'Every single item inside a <ul> or <ol> must be wrapped in <li> (list item). No exceptions!'
+              },
+              {
+                id: 'lists-q1',
+                label: 'Quiz: Ordered',
+                type: 'question',
+                expanded: false,
+                content: 'Which list shows numbers?',
+                questionData: {
+                  type: 'mc',
+                  prompt: 'Which list type displays numbers by default?',
+                  options: ['<<ul>', '<ol>', '<dl>'],
+                  correctAnswer: 1,
+                  hint: '"O" stands for "Ordered" — think sequence and numbers!',
+                  explanation: 'Correct! <ol> (ordered list) automatically numbers its items.'
+                }
+              },
+              {
+                id: 'lists-q2',
+                label: 'Quiz: Item Tag',
+                type: 'question',
+                expanded: false,
+                content: 'What wraps each list entry?',
+                questionData: {
+                  type: 'mc',
+                  prompt: 'What tag wraps each individual item in ANY list?',
+                  options: ['<<item>', '<li>', '<list>'],
+                  correctAnswer: 1,
+                  hint: 'It\'s short for "list item."',
+                  explanation: 'Correct! <li> is the only valid tag for list items inside <ul> or <ol>.'
+                }
+              }
+            ]
+          },
+          {
+            id: 'dl',
+            label: 'Description Lists',
+            type: 'concept',
+            expanded: false,
+            content: 'Perfect for glossaries, FAQs, and metadata. One term paired with one or more descriptions.',
+            children: [
+              {
+                id: 'dl-dl',
+                label: '<dl> Container',
+                type: 'concept',
+                expanded: false,
+                content: 'The description list wrapper. Holds all the terms and their definitions together.'
+              },
+              {
+                id: 'dl-dt',
+                label: '<dt> Term',
+                type: 'concept',
+                expanded: false,
+                content: 'The term being defined — like a word in a dictionary or a question in an FAQ.'
+              },
+              {
+                id: 'dl-dd',
+                label: '<dd> Description',
+                type: 'concept',
+                expanded: false,
+                content: 'The definition or explanation of the term. You can have multiple <dd> elements for one <dt> if needed.'
+              },
+              {
+                id: 'dl-q1',
+                label: 'Quiz: Term',
+                type: 'question',
+                expanded: false,
+                content: 'Which tag holds the vocabulary word?',
+                questionData: {
+                  type: 'mc',
+                  prompt: 'In a description list, what tag holds the term being defined?',
+                  options: ['<<dd>', '<dt>', '<term>'],
+                  correctAnswer: 1,
+                  hint: '"t" stands for "term."',
+                  explanation: 'Correct! <dt> (description term) holds the word or phrase being defined.'
+                }
+              }
+            ]
+          },
+          {
+            id: 'tables',
+            label: 'Tables',
+            type: 'concept',
+            expanded: false,
+            content: 'Tables display data in rows and columns — perfect for schedules, pricing, comparisons, and statistics.',
+            children: [
+              {
+                id: 'table-table',
+                label: '<table> Container',
+                type: 'concept',
+                expanded: false,
+                content: 'Wraps the entire table. Everything table-related lives inside this tag.'
+              },
+              {
+                id: 'table-tr',
+                label: '<tr> Table Row',
+                type: 'concept',
+                expanded: false,
+                content: 'Creates a horizontal row. Every row holds one or more cells.'
+              },
+              {
+                id: 'table-th',
+                label: '<th> Header Cell',
+                type: 'concept',
+                expanded: false,
+                content: 'A header cell describes the column or row. Browsers usually bold it and center it automatically.'
+              },
+              {
+                id: 'table-td',
+                label: '<td> Data Cell',
+                type: 'concept',
+                expanded: false,
+                content: 'A standard data cell. Holds the actual information — numbers, text, even images!'
+              },
+              {
+                id: 'tables-q1',
+                label: 'Quiz: Row',
+                type: 'question',
+                expanded: false,
+                content: 'What creates a horizontal line?',
+                questionData: {
+                  type: 'mc',
+                  prompt: 'Which tag creates a table row?',
+                  options: ['<<td>', '<tr>', '<th>'],
+                  correctAnswer: 1,
+                  hint: '"r" stands for "row."',
+                  explanation: 'Correct! <tr> (table row) creates each horizontal row in a table.'
+                }
+              },
+              {
+                id: 'tables-q2',
+                label: 'Quiz: Header',
+                type: 'question',
+                expanded: false,
+                content: 'Which cell is for column titles?',
+                questionData: {
+                  type: 'mc',
+                  prompt: 'Which tag is specifically for a header cell in a table?',
+                  options: ['<<td>', '<tr>', '<th>'],
+                  correctAnswer: 2,
+                  hint: '"h" stands for "header."',
+                  explanation: 'Correct! <th> (table header) is used for column and row headers, usually rendered bold.'
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ];
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function findNode(root, id) {
+    if (root.id === id) return root;
+    if (root.children) {
+      for (let i = 0; i < root.children.length; i++) {
+        const found = findNode(root.children[i], id);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  function collectVisibleNodes(node, result) {
+    if (!result) result = [];
+    result.push(node);
+    if (node.expanded && node.children) {
+      for (let i = 0; i < node.children.length; i++) {
+        collectVisibleNodes(node.children[i], result);
+      }
+    }
+    return result;
+  }
+
+  function getNodeSize(node) {
+    if (node.type === 'root') return { w: 180, h: 80 };
+    return { w: 160, h: 70 };
+  }
+
+  function estimateWidth(node) {
+    const size = getNodeSize(node);
+    if (!node.expanded || !node.children || node.children.length === 0) {
+      return size.w;
+    }
+    let childrenWidth = 0;
+    for (let i = 0; i < node.children.length; i++) {
+      childrenWidth += estimateWidth(node.children[i]);
+      if (i < node.children.length - 1) childrenWidth += SIBLING_GAP;
+    }
+    return Math.max(size.w, childrenWidth);
+  }
+
+  function layoutTree(node, leftBound, topPos, widthForSubtree) {
+    const size = getNodeSize(node);
+    node.renderX = leftBound + (widthForSubtree - size.w) / 2;
+    node.renderY = topPos;
+
+    if (!node.expanded || !node.children || node.children.length === 0) return;
+
+    let childrenTotalW = 0;
+    for (let i = 0; i < node.children.length; i++) {
+      childrenTotalW += estimateWidth(node.children[i]);
+      if (i < node.children.length - 1) childrenTotalW += SIBLING_GAP;
+    }
+
+    let childX = leftBound + (widthForSubtree - childrenTotalW) / 2;
+    const childY = topPos + LEVEL_GAP;
+
+    for (let i = 0; i < node.children.length; i++) {
+      const childW = estimateWidth(node.children[i]);
+      layoutTree(node.children[i], childX, childY, childW);
+      childX += childW + SIBLING_GAP;
+    }
+  }
+
+  function getLinePath(parent, child) {
+    const pSize = getNodeSize(parent);
+    const cSize = getNodeSize(child);
+    const x1 = parent.renderX + pSize.w / 2;
+    const y1 = parent.renderY + pSize.h;
+    const x2 = child.renderX + cSize.w / 2;
+    const y2 = child.renderY;
+    const c1y = y1 + (y2 - y1) * 0.5;
+    return 'M ' + x1 + ' ' + y1 + ' C ' + x1 + ' ' + c1y + ', ' + x2 + ' ' + c1y + ', ' + x2 + ' ' + y2;
+  }
+
+  function renderChapter(index) {
+    const chapter = chapters[index];
+    const container = document.getElementById('map' + (index + 1));
+    const svg = container.querySelector('.connections');
+    const nodesLayer = container.querySelector('.nodes-layer');
+
+    const treeWidth = estimateWidth(chapter.root);
+    const containerWidth = Math.max(container.clientWidth || 800, treeWidth + 80);
+    const leftBound = (containerWidth - treeWidth) / 2;
+    layoutTree(chapter.root, leftBound, 40, treeWidth);
+
+    const allNodes = collectVisibleNodes(chapter.root);
+    let maxX = 0;
+    let maxY = 0;
+    for (let i = 0; i < allNodes.length; i++) {
+      const s = getNodeSize(allNodes[i]);
+      if (allNodes[i].renderX + s.w > maxX) maxX = allNodes[i].renderX + s.w;
+      if (allNodes[i].renderY + s.h > maxY) maxY = allNodes[i].renderY + s.h;
+    }
+
+    const minW = maxX + 40;
+    const minH = maxY + 40;
+    container.style.minWidth = minW + 'px';
+    container.style.minHeight = minH + 'px';
+
+    let paths = '';
+    for (let i = 0; i < allNodes.length; i++) {
+      const node = allNodes[i];
+      if (node.expanded && node.children) {
+        for (let j = 0; j < node.children.length; j++) {
+          const child = node.children[j];
+          if (allNodes.indexOf(child) !== -1) {
+            paths += '<path d="' + getLinePath(node, child) + '" stroke="#94a3b8" stroke-width="2.5" fill="none" stroke-linecap="round" />';
+          }
+        }
+      }
+    }
+    svg.innerHTML = paths;
+    svg.setAttribute('width', minW);
+    svg.setAttribute('height', minH);
+
+    nodesLayer.innerHTML = '';
+    for (let i = 0; i < allNodes.length; i++) {
+      const node = allNodes[i];
+      const size = getNodeSize(node);
+      const el = document.createElement('div');
+
+      let className = 'mind-node ' + node.type;
+      if (node.id === activeNodeIds[index]) className += ' active';
+      if (node.answered) className += (node.correct ? ' correct' : ' incorrect');
+      el.className = className;
+
+      el.style.left = node.renderX + 'px';
+      el.style.top = node.renderY + 'px';
+      el.style.width = size.w + 'px';
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('aria-label', node.label + '. ' + (node.children ? (node.expanded ? 'Expanded' : 'Collapsed') + '. Press Enter to ' + (node.expanded ? 'collapse' : 'expand') + '.' : ''));
+      if (node.children) {
+        el.setAttribute('aria-expanded', node.expanded);
+      }
+
+      let html = '<div class="node-label">' + escapeHtml(node.label) + '</div>';
+      if (node.type === 'question') {
+        html += '<div class="badge" aria-hidden="true">?</div>';
+      }
+      if (node.children && node.children.length > 0) {
+        html += '<div class="expand-icon" aria-hidden="true">' + (node.expanded ? '−' : '+') + '</div>';
+      }
+
+      el.innerHTML = html;
+
+      el.addEventListener('click', function() {
+        handleNodeClick(node, index);
+      });
+      el.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleNodeClick(node, index);
+        }
+      });
+
+      nodesLayer.appendChild(el);
+    }
+
+    updateProgress(index);
+  }
+
+  function handleNodeClick(node, chapterIndex) {
+    if (node.children && node.children.length > 0) {
+      node.expanded = !node.expanded;
+    }
+    activeNodeIds[chapterIndex] = node.id;
+    renderChapter(chapterIndex);
+    updateDetailPanel(node, chapterIndex);
+  }
+
+  function updateDetailPanel(node, chapterIndex) {
+    const panel = document.getElementById('detail' + (chapterIndex + 1));
+    let html = '';
+
+    html += '<h3>' + escapeHtml(node.label) + '</h3>';
+
+    if (node.content) {
+      html += '<p>' + escapeHtml(node.content) + '</p>';
+    }
+
+    if (node.type === 'question') {
+      if (node.answered) {
+        html += '<div class="feedback ' + (node.correct ? 'correct' : 'incorrect') + '">';
+        html += '<strong>' + (node.correct ? '✔ Correct!' : '✖ Not quite') + '</strong>';
+        html += '<p>' + escapeHtml(node.feedbackText) + '</p>';
+        html += '<button class="retry-btn" onclick="resetQuestion(\'' + node.id + '\', ' + chapterIndex + ')">Try Again</button>';
+        html += '</div>';
+      } else {
+        html += renderQuestionForm(node, chapterIndex);
+      }
+    }
+
+    if (node.children && node.children.length > 0) {
+      const state = node.expanded ? 'collapse' : 'expand';
+      html += '<p class="hint"><em>💡 This topic has ' + node.children.length + ' connected ideas. Click the card above to ' + state + ' them.</em></p>';
+    } else if (node.type !== 'question') {
+      html += '<p class="hint"><em>🌟 You\'ve reached a leaf node! Explore other branches to learn more.</em></p>';
+    }
+
+    panel.innerHTML = html;
+  }
+
+  function renderQuestionForm(node, chapterIndex) {
+    const q = node.questionData;
+    let html = '<div class="question-form">';
+    html += '<p class="q-prompt">' + escapeHtml(q.prompt) + '</p>';
+
+    if (q.type === 'mc') {
+      html += '<div class="mc-options">';
+      for (let i = 0; i < q.options.length; i++) {
+        html += '<button class="option-btn" onclick="submitMC(\'' + node.id + '\', ' + i + ', ' + chapterIndex + ')">' + escapeHtml(q.options[i]) + '</button>';
+      }
+      html += '</div>';
+    } else if (q.type === 'short') {
+      html += '<div class="short-answer">';
+      html += '<input type="text" id="input-' + node.id + '" placeholder="Type your answer..." aria-label="Your answer">';
+      html += '<button class="submit-btn" onclick="submitShort(\'' + node.id + '\', ' + chapterIndex + ')">Check Answer</button>';
+      html += '</div>';
+    }
+
+    html += '<div class="hint-area" id="hint-' + node.id + '"></div>';
+    html += '</div>';
+    return html;
+  }
+
+  function submitMC(nodeId, optionIndex, chapterIndex) {
+    const node = findNode(chapters[chapterIndex].root, nodeId);
+    const q = node.questionData;
+    const isCorrect = optionIndex === q.correctAnswer;
+
+    node.answered = true;
+    node.correct = isCorrect;
+    node.feedbackText = isCorrect ? q.explanation : q.hint;
+
+    renderChapter(chapterIndex);
+    updateDetailPanel(node, chapterIndex);
+  }
+
+  function submitShort(nodeId, chapterIndex) {
+    const input = document.getElementById('input-' + nodeId);
+    if (!input || !input.value.trim()) {
+      const hint = document.getElementById('hint-' + nodeId);
+      if (hint) hint.textContent = 'Please type an answer first!';
+      return;
+    }
+    const answer = input.value.trim().toLowerCase();
+    const node = findNode(chapters[chapterIndex].root, nodeId);
+    const q = node.questionData;
+
+    const isCorrect = q.acceptedAnswers.indexOf(answer) !== -1;
+    node.answered = true;
+    node.correct = isCorrect;
+    node.feedbackText = isCorrect ? q.explanation : q.hint;
+
+    renderChapter(chapterIndex);
+    updateDetailPanel(node, chapterIndex);
+  }
+
+  function resetQuestion(nodeId, chapterIndex) {
+    const node = findNode(chapters[chapterIndex].root, nodeId);
+    node.answered = false;
+    node.correct = false;
+    node.feedbackText = '';
+    renderChapter(chapterIndex);
+    updateDetailPanel(node, chapterIndex);
+  }
+
+  function updateProgress(chapterIndex) {
+    const chapter = chapters[chapterIndex];
+    let total = 0;
+    let correct = 0;
+
+    function count(node) {
+      if (node.type === 'question') {
+        total++;
+        if (node.answered && node.correct) correct++;
+      }
+      if (node.children) {
+        for (let i = 0; i < node.children.length; i++) {
+          count(node.children[i]);
+        }
+      }
+    }
+    count(chapter.root);
+
+    const el = document.getElementById('progress' + (chapterIndex + 1));
+    if (correct === total && total > 0) {
+      el.textContent = correct + ' of ' + total + ' questions answered correctly 🎉 Chapter Complete!';
+      el.classList.add('complete');
+    } else {
+      el.textContent = correct + ' of ' + total + ' questions answered correctly';
+      el.classList.remove('complete');
+    }
+  }
+
+  function resetChapter(index) {
+    const chapter = chapters[index];
+    function resetNode(node) {
+      node.expanded = false;
+      if (node.type === 'question') {
+        node.answered = false;
+        node.correct = false;
+        node.feedbackText = '';
+      }
+      if (node.children) {
+        for (let i = 0; i < node.children.length; i++) {
+          resetNode(node.children[i]);
+        }
+      }
+    }
+    resetNode(chapter.root);
+    chapter.root.expanded = true;
+    activeNodeIds[index] = chapter.root.id;
+    renderChapter(index);
+    updateDetailPanel(chapter.root, index);
+  }
+
+  function switchTab(index) {
+    const tabs = document.querySelectorAll('[role="tab"]');
+    const panels = document.querySelectorAll('.chapter-panel');
+
+    for (let i = 0; i < tabs.length; i++) {
+      const isActive = i === index;
+      tabs[i].setAttribute('aria-selected', isActive);
+      tabs[i].classList.toggle('active', isActive);
+      tabs[i].setAttribute('tabindex', isActive ? '0' : '-1');
+    }
+
+    for (let i = 0; i < panels.length; i++) {
+      const isActive = i === index;
+      panels[i].classList.toggle('active', isActive);
+      if (!isActive) {
+        panels[i].style.display = 'none';
+        panels[i].setAttribute('hidden', '');
+      } else {
+        panels[i].removeAttribute('hidden');
+      }
+    }
+
+    panels[index].style.display = 'block';
+
+    if (!chapters[index].rendered) {
+      setTimeout(function() {
+        chapters[index].root.expanded = true;
+        activeNodeIds[index] = chapters[index].root.id;
+        renderChapter(index);
+        updateDetailPanel(chapters[index].root, index);
+        chapters[index].rendered = true;
+      }, 50);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const tabs = document.querySelectorAll('[role="tab"]');
+    for (let i = 0; i < tabs.length; i++) {
+      tabs[i].addEventListener('click', function() {
+        switchTab(i);
+      });
+      tabs[i].addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowRight') {
+          const next = (i + 1) % tabs.length;
+          tabs[next].focus();
+          switchTab(next);
+        } else if (e.key === 'ArrowLeft') {
+          const prev = (i - 1 + tabs.length) % tabs.length;
+          tabs[prev].focus();
+          switchTab(prev);
+        }
+      });
+    }
+
+    switchTab(0);
+  });
+</script>
+
+</body>
+</html>
