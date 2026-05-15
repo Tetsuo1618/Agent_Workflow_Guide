@@ -1,0 +1,1638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget Buddy - Expense & Receipt Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #334155;
+            --bg-hover: #475569;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent: #06b6d4;
+            --accent-hover: #0891b2;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --purple: #8b5cf6;
+            --pink: #ec4899;
+            --border: #475569;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent), var(--purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p { color: var(--text-secondary); margin-top: 8px; font-size: 1.1rem; }
+
+        /* View Toggle Tabs */
+        .view-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .view-tab {
+            padding: 10px 24px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .view-tab:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .view-tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+        /* Budget Cards */
+        .budget-section { margin-bottom: 24px; }
+
+        .budget-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .budget-card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .budget-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent), var(--purple));
+        }
+
+        .budget-card.over-budget::before {
+            background: linear-gradient(90deg, var(--danger), var(--warning));
+        }
+
+        .budget-card.near-limit::before {
+            background: linear-gradient(90deg, var(--warning), var(--danger));
+        }
+
+        .budget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .budget-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .budget-edit {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .budget-edit:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .budget-amounts {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .budget-spent { font-size: 1.5rem; font-weight: 800; }
+
+        .budget-limit {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            align-self: flex-end;
+        }
+
+        .budget-progress {
+            width: 100%;
+            height: 12px;
+            background: var(--bg-card);
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .budget-progress-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.6s ease, background-color 0.3s;
+            position: relative;
+        }
+
+        .budget-progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .budget-status {
+            margin-top: 10px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-safe { color: var(--success); }
+        .status-warning { color: var(--warning); }
+        .status-danger { color: var(--danger); }
+
+        .budget-input-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .budget-input-group input {
+            flex: 1;
+            padding: 8px 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .budget-input-group button {
+            padding: 8px 16px;
+            background: var(--accent);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title .icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .icon-blue { background: rgba(6, 182, 212, 0.2); }
+        .icon-green { background: rgba(34, 197, 94, 0.2); }
+        .icon-purple { background: rgba(139, 92, 246, 0.2); }
+        .icon-orange { background: rgba(245, 158, 11, 0.2); }
+        .icon-red { background: rgba(239, 68, 68, 0.2); }
+        .icon-pink { background: rgba(236, 72, 153, 0.2); }
+
+        .form-group { margin-bottom: 16px; }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-width: 600px) {
+            .form-row { grid-template-columns: 1fr; }
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #16a34a; }
+        .btn-sm { padding: 6px 12px; font-size: 0.875rem; }
+
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: var(--bg-card);
+        }
+
+        .drop-zone:hover,
+        .drop-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(6, 182, 212, 0.1);
+        }
+
+        .drop-zone .drop-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.7; }
+        .drop-zone p { color: var(--text-secondary); margin-bottom: 8px; }
+        .drop-zone .hint { font-size: 0.8rem; color: var(--text-secondary); opacity: 0.6; }
+
+        .receipt-preview {
+            margin-top: 16px;
+            max-height: 200px;
+            overflow: hidden;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .receipt-preview img { width: 100%; height: auto; border-radius: 10px; }
+
+        .expense-list { max-height: 400px; overflow-y: auto; }
+
+        .expense-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            background: var(--bg-card);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .expense-item:hover { border-color: var(--accent); background: var(--bg-hover); }
+
+        .expense-info { flex: 1; min-width: 0; }
+
+        .expense-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .expense-meta {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .expense-amount {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-right: 12px;
+            white-space: nowrap;
+        }
+
+        .expense-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .summary-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .summary-card .value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .summary-card .label { font-size: 0.875rem; color: var(--text-secondary); }
+
+        .chart-container { position: relative; height: 300px; margin-top: 20px; }
+
+        .chart-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 300px;
+            color: var(--text-secondary);
+        }
+
+        .chart-empty .icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.4; }
+
+        .empty-state { text-align: center; padding: 40px; color: var(--text-secondary); }
+        .empty-state .icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.5; }
+
+        .category-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .cat-food { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .cat-transport { background: rgba(6, 182, 212, 0.2); color: #06b6d4; }
+        .cat-utilities { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
+        .cat-entertainment { background: rgba(236, 72, 153, 0.2); color: #ec4899; }
+        .cat-shopping { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .cat-health { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .cat-other { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
+
+        .receipt-extracted {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 16px;
+            margin-top: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .receipt-extracted h4 { margin-bottom: 12px; color: var(--accent); }
+
+        .extracted-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .extracted-item:last-child { border-bottom: none; }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+            padding: 20px;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal h2 { margin-bottom: 20px; }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            justify-content: flex-end;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: var(--bg-card);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+
+        .progress-bar .fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 2px;
+            transition: width 0.3s;
+            width: 0%;
+        }
+
+        .receipt-item-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr auto;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        @media (max-width: 500px) {
+            .receipt-item-row { grid-template-columns: 1fr; }
+        }
+
+        .receipt-item-row input,
+        .receipt-item-row select {
+            padding: 8px 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            font-family: inherit;
+        }
+
+        .receipt-item-row button {
+            padding: 8px;
+            background: var(--danger);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        .add-receipt-item { margin-top: 12px; text-align: center; }
+
+        .filter-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .filter-bar select,
+        .filter-bar input {
+            padding: 8px 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            font-family: inherit;
+        }
+
+        .month-nav {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .month-nav button {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .month-nav button:hover { background: var(--accent); border-color: var(--accent); }
+
+        .month-nav h2 { font-size: 1.5rem; min-width: 200px; text-align: center; }
+
+        .week-nav {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .week-nav button {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .week-nav button:hover { background: var(--accent); border-color: var(--accent); }
+
+        .week-nav h2 { font-size: 1.2rem; min-width: 280px; text-align: center; }
+
+        .export-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 100;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-secondary);
+            border: 1px solid var(--accent);
+            color: var(--text-primary);
+            padding: 12px 24px;
+            border-radius: 10px;
+            box-shadow: var(--shadow-lg);
+            z-index: 2000;
+            transition: transform 0.3s;
+            font-weight: 500;
+        }
+
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        .hidden { display: none !important; }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💰 Budget Buddy</h1>
+            <p>Your friendly expense tracker — learn money management the easy way</p>
+        </header>
+
+        <!-- View Toggle -->
+        <div class="view-tabs">
+            <button class="view-tab active" onclick="setView('monthly')" id="tabMonthly">
+                📅 Monthly View
+            </button>
+            <button class="view-tab" onclick="setView('weekly')" id="tabWeekly">
+                📆 Weekly View
+            </button>
+        </div>
+
+        <!-- Budget Section -->
+        <div class="budget-section">
+            <div class="section-title">🎯 Your Spending Limits</div>
+            <div class="budget-grid">
+                <!-- Monthly Budget Card -->
+                <div class="budget-card" id="monthlyBudgetCard">
+                    <div class="budget-header">
+                        <div class="budget-title">📅 Monthly Budget</div>
+                        <button class="budget-edit" onclick="toggleBudgetEdit('monthly')">✏️ Edit</button>
+                    </div>
+                    <div class="budget-amounts">
+                        <div class="budget-spent" id="monthlySpent">$0.00</div>
+                        <div class="budget-limit">of <span id="monthlyLimit">$500.00</span></div>
+                    </div>
+                    <div class="budget-progress">
+                        <div class="budget-progress-fill" id="monthlyProgress" style="width: 0%; background: var(--success);"></div>
+                    </div>
+                    <div class="budget-status" id="monthlyStatus">
+                        <span>💚</span> On track — you're doing great!
+                    </div>
+                    <div class="budget-input-group hidden" id="monthlyBudgetInput">
+                        <input type="number" id="monthlyBudgetValue" placeholder="Enter monthly budget" step="0.01" min="0">
+                        <button onclick="saveBudget('monthly')">Save</button>
+                    </div>
+                </div>
+
+                <!-- Weekly Budget Card -->
+                <div class="budget-card" id="weeklyBudgetCard">
+                    <div class="budget-header">
+                        <div class="budget-title">📆 Weekly Budget</div>
+                        <button class="budget-edit" onclick="toggleBudgetEdit('weekly')">✏️ Edit</button>
+                    </div>
+                    <div class="budget-amounts">
+                        <div class="budget-spent" id="weeklySpent">$0.00</div>
+                        <div class="budget-limit">of <span id="weeklyLimit">$125.00</span></div>
+                    </div>
+                    <div class="budget-progress">
+                        <div class="budget-progress-fill" id="weeklyProgress" style="width: 0%; background: var(--success);"></div>
+                    </div>
+                    <div class="budget-status" id="weeklyStatus">
+                        <span>💚</span> On track — keep it up!
+                    </div>
+                    <div class="budget-input-group hidden" id="weeklyBudgetInput">
+                        <input type="number" id="weeklyBudgetValue" placeholder="Enter weekly budget" step="0.01" min="0">
+                        <button onclick="saveBudget('weekly')">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Month/Week Navigation -->
+        <div class="month-nav" id="monthNav">
+            <button onclick="changeMonth(-1)">◀</button>
+            <h2 id="currentMonthDisplay">May 2026</h2>
+            <button onclick="changeMonth(1)">▶</button>
+        </div>
+
+        <div class="week-nav hidden" id="weekNav">
+            <button onclick="changeWeek(-1)">◀</button>
+            <h2 id="currentWeekDisplay">May 11 - May 17, 2026</h2>
+            <button onclick="changeWeek(1)">▶</button>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+            <div class="summary-card">
+                <div class="value" id="totalExpenses" style="color: var(--accent);">$0.00</div>
+                <div class="label">Total Spent</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" id="transactionCount" style="color: var(--success);">0</div>
+                <div class="label">Transactions</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" id="avgExpense" style="color: var(--warning);">$0.00</div>
+                <div class="label">Average per Purchase</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" id="topCategory" style="color: var(--pink);">-</div>
+                <div class="label">Top Category</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" id="remainingBudget" style="color: var(--purple);">$0.00</div>
+                <div class="label" id="remainingLabel">Remaining Monthly</div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Add Expense Form -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="icon icon-green">➕</div>
+                        Add Expense
+                    </div>
+                </div>
+                <form id="expenseForm" onsubmit="addExpense(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="expenseName">What did you buy?</label>
+                            <input type="text" id="expenseName" placeholder="e.g., Pizza, Gas, Movie" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="expenseAmount">How much? ($)</label>
+                            <input type="number" id="expenseAmount" placeholder="0.00" step="0.01" min="0.01" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="expenseCategory">Category</label>
+                            <select id="expenseCategory" required>
+                                <option value="">Pick a category</option>
+                                <option value="food">🍔 Food</option>
+                                <option value="transport">🚗 Transport</option>
+                                <option value="utilities">💡 Utilities</option>
+                                <option value="entertainment">🎬 Fun</option>
+                                <option value="shopping">🛍️ Shopping</option>
+                                <option value="health">🏥 Health</option>
+                                <option value="other">📦 Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="expenseDate">When?</label>
+                            <input type="date" id="expenseDate" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        💾 Save Expense
+                    </button>
+                </form>
+            </div>
+
+            <!-- Receipt Upload -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="icon icon-purple">📄</div>
+                        Receipt Scanner
+                    </div>
+                </div>
+                <div class="drop-zone" id="dropZone" onclick="document.getElementById('receiptInput').click()">
+                    <div class="drop-icon">📤</div>
+                    <p><strong>Drop receipt photo here</strong> or tap to upload</p>
+                    <p class="hint">JPG, PNG, PDF — We'll read it for you!</p>
+                </div>
+                <input type="file" id="receiptInput" accept="image/*,.pdf" style="display: none;" onchange="handleReceiptUpload(event)">
+
+                <div class="receipt-preview" id="receiptPreview">
+                    <img id="receiptImage" src="" alt="Receipt preview">
+                </div>
+
+                <div class="progress-bar hidden" id="uploadProgress">
+                    <div class="fill" id="progressFill"></div>
+                </div>
+
+                <div id="receiptResults"></div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="dashboard-grid">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="icon icon-blue">📊</div>
+                        Where Your Money Goes
+                    </div>
+                </div>
+                <div class="chart-container" id="pieChartContainer">
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="icon icon-orange">📈</div>
+                        Spending Pattern
+                    </div>
+                </div>
+                <div class="chart-container" id="barChartContainer">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expense List -->
+        <div class="card" style="margin-bottom: 80px;">
+            <div class="card-header">
+                <div class="card-title">
+                    <div class="icon icon-red">📝</div>
+                    Your Purchases
+                </div>
+                <button class="btn btn-danger btn-sm" onclick="clearAllExpenses()">🗑️ Clear All</button>
+            </div>
+
+            <div class="filter-bar">
+                <select id="filterCategory" onchange="renderExpenseList()">
+                    <option value="">All Categories</option>
+                    <option value="food">🍔 Food</option>
+                    <option value="transport">🚗 Transport</option>
+                    <option value="utilities">💡 Utilities</option>
+                    <option value="entertainment">🎬 Fun</option>
+                    <option value="shopping">🛍️ Shopping</option>
+                    <option value="health">🏥 Health</option>
+                    <option value="other">📦 Other</option>
+                </select>
+                <input type="text" id="filterSearch" placeholder="🔍 Search your purchases..." oninput="renderExpenseList()">
+            </div>
+
+            <div class="expense-list" id="expenseList">
+                <div class="empty-state">
+                    <div class="icon">📭</div>
+                    <p>No expenses yet. Add your first purchase above!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Review Modal -->
+    <div class="modal-overlay" id="receiptModal">
+        <div class="modal">
+            <h2>✅ Review Receipt Items</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 16px;">Check what we found. Edit or remove anything that's off before saving.</p>
+            <div id="receiptItemsContainer"></div>
+            <div class="add-receipt-item">
+                <button class="btn btn-primary btn-sm" onclick="addReceiptItemRow()">➕ Add Missing Item</button>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn" style="background: var(--bg-card); color: var(--text-primary);" onclick="closeReceiptModal()">❌ Cancel</button>
+                <button class="btn btn-success" onclick="confirmReceiptItems()">✅ Add to Expenses</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Export Button -->
+    <button class="btn btn-primary export-btn" onclick="exportData()">
+        📥 Export
+    </button>
+
+    <script>
+        // ==================== STATE ====================
+        let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+        let budgets = JSON.parse(localStorage.getItem('budgets')) || { monthly: 500, weekly: 125 };
+        let currentDate = new Date();
+        let currentWeekOffset = 0;
+        let currentView = 'monthly';
+        let pieChart = null;
+        let barChart = null;
+        let extractedReceiptItems = [];
+
+        // Category config
+        const categoryConfig = {
+            food: { label: 'Food', class: 'cat-food', color: '#f59e0b', emoji: '🍔' },
+            transport: { label: 'Transport', class: 'cat-transport', color: '#06b6d4', emoji: '🚗' },
+            utilities: { label: 'Utilities', class: 'cat-utilities', color: '#8b5cf6', emoji: '💡' },
+            entertainment: { label: 'Fun', class: 'cat-entertainment', color: '#ec4899', emoji: '🎬' },
+            shopping: { label: 'Shopping', class: 'cat-shopping', color: '#22c55e', emoji: '🛍️' },
+            health: { label: 'Health', class: 'cat-health', color: '#ef4444', emoji: '🏥' },
+            other: { label: 'Other', class: 'cat-other', color: '#94a3b8', emoji: '📦' }
+        };
+
+        // ==================== INIT ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('expenseDate').valueAsDate = new Date();
+            updateBudgetDisplay();
+            updateMonthDisplay();
+            updateWeekDisplay();
+            renderAll();
+            setupDragDrop();
+        });
+
+        // ==================== VIEW SWITCHING ====================
+        function setView(view) {
+            currentView = view;
+            document.getElementById('tabMonthly').classList.toggle('active', view === 'monthly');
+            document.getElementById('tabWeekly').classList.toggle('active', view === 'weekly');
+            document.getElementById('monthNav').classList.toggle('hidden', view !== 'monthly');
+            document.getElementById('weekNav').classList.toggle('hidden', view !== 'weekly');
+            document.getElementById('remainingLabel').textContent = 
+                view === 'monthly' ? 'Remaining Monthly' : 'Remaining Weekly';
+            renderAll();
+        }
+
+        // ==================== BUDGET MANAGEMENT ====================
+        function toggleBudgetEdit(type) {
+            const inputDiv = document.getElementById(type + 'BudgetInput');
+            const isHidden = inputDiv.classList.contains('hidden');
+            document.getElementById('monthlyBudgetInput').classList.add('hidden');
+            document.getElementById('weeklyBudgetInput').classList.add('hidden');
+            if (isHidden) {
+                inputDiv.classList.remove('hidden');
+                document.getElementById(type + 'BudgetValue').value = budgets[type];
+                document.getElementById(type + 'BudgetValue').focus();
+            }
+        }
+
+        function saveBudget(type) {
+            const value = parseFloat(document.getElementById(type + 'BudgetValue').value);
+            if (value > 0) {
+                budgets[type] = value;
+                localStorage.setItem('budgets', JSON.stringify(budgets));
+                document.getElementById(type + 'BudgetInput').classList.add('hidden');
+                updateBudgetDisplay();
+                renderAll();
+                showToast('✅ ' + type.charAt(0).toUpperCase() + type.slice(1) + ' budget updated!');
+            }
+        }
+
+        function updateBudgetDisplay() {
+            document.getElementById('monthlyLimit').textContent = '$' + budgets.monthly.toFixed(2);
+            document.getElementById('weeklyLimit').textContent = '$' + budgets.weekly.toFixed(2);
+        }
+
+        // ==================== WEEKLY EXPENSES - FIXED ====================
+        /**
+         * Get the start of the week (Sunday) for a given date.
+         * Uses a FRESH clone of the date to avoid mutating the original.
+         * @param {Date} date - The reference date
+         * @param {number} offset - Number of weeks to offset (+/-)
+         * @returns {Date} Start of week (Sunday at 00:00:00)
+         */
+        function getWeekStart(date, offset = 0) {
+            // Create a FRESH copy so we don't mutate currentDate
+            const d = new Date(date.getTime());
+            const dayOfWeek = d.getDay(); // 0=Sunday, 1=Monday, ... 6=Saturday
+
+            // Go back to Sunday of this week, then apply week offset
+            d.setDate(d.getDate() - dayOfWeek + (offset * 7));
+            d.setHours(0, 0, 0, 0);
+            return d;
+        }
+
+        /**
+         * Get the end of the week (Saturday at 23:59:59) for a given week start.
+         * @param {Date} weekStart - Start of week date
+         * @returns {Date} End of week (Saturday at 23:59:59.999)
+         */
+        function getWeekEnd(weekStart) {
+            const end = new Date(weekStart.getTime());
+            end.setDate(end.getDate() + 6);
+            end.setHours(23, 59, 59, 999);
+            return end;
+        }
+
+        /**
+         * Get expenses for the currently selected period (month or week).
+         * For weekly view: filters expenses within the current week (Sun-Sat).
+         */
+        function getCurrentExpenses() {
+            if (currentView === 'monthly') {
+                return expenses.filter(e => {
+                    const d = new Date(e.date);
+                    return d.getMonth() === currentDate.getMonth() && 
+                           d.getFullYear() === currentDate.getFullYear();
+                });
+            } else {
+                // Weekly view: get expenses from Sunday to Saturday
+                const weekStart = getWeekStart(currentDate, currentWeekOffset);
+                const weekEnd = getWeekEnd(weekStart);
+
+                return expenses.filter(e => {
+                    const d = new Date(e.date + 'T00:00:00'); // Parse as local time
+                    return d >= weekStart && d <= weekEnd;
+                });
+            }
+        }
+
+        /**
+         * Update budget progress bars for both monthly and weekly views.
+         * Shows the correct budget card based on current view.
+         */
+        function updateBudgetProgress() {
+            const currentExpenses = getCurrentExpenses();
+            const total = currentExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+            const budget = currentView === 'monthly' ? budgets.monthly : budgets.weekly;
+            const spentEl = currentView === 'monthly' ? 'monthlySpent' : 'weeklySpent';
+            const progressEl = currentView === 'monthly' ? 'monthlyProgress' : 'weeklyProgress';
+            const statusEl = currentView === 'monthly' ? 'monthlyStatus' : 'weeklyStatus';
+            const cardEl = currentView === 'monthly' ? 'monthlyBudgetCard' : 'weeklyBudgetCard';
+
+            const percentage = Math.min((total / budget) * 100, 100);
+
+            document.getElementById(spentEl).textContent = '$' + total.toFixed(2);
+            document.getElementById(progressEl).style.width = percentage + '%';
+
+            const card = document.getElementById(cardEl);
+            card.classList.remove('over-budget', 'near-limit');
+
+            let color, statusText, emoji;
+            if (percentage >= 100) {
+                color = 'var(--danger)';
+                statusText = "Whoa! You've hit your limit. Time to slow down!";
+                emoji = '🚨';
+                card.classList.add('over-budget');
+            } else if (percentage >= 80) {
+                color = 'var(--warning)';
+                statusText = "Getting close to your limit — be careful!";
+                emoji = '⚠️';
+                card.classList.add('near-limit');
+            } else if (percentage >= 50) {
+                color = 'var(--warning)';
+                statusText = "Halfway there — you're doing fine.";
+                emoji = '👍';
+            } else {
+                color = 'var(--success)';
+                statusText = "Great job! You're well within budget.";
+                emoji = '💚';
+            }
+
+            document.getElementById(progressEl).style.background = color;
+            document.getElementById(statusEl).innerHTML = `<span>${emoji}</span> ${statusText}`;
+            document.getElementById(statusEl).className = 'budget-status ' + 
+                (percentage >= 100 ? 'status-danger' : percentage >= 80 ? 'status-warning' : 'status-safe');
+        }
+
+        // ==================== NAVIGATION ====================
+        function changeMonth(delta) {
+            currentDate.setMonth(currentDate.getMonth() + delta);
+            updateMonthDisplay();
+            renderAll();
+        }
+
+        /**
+         * Change the current week by delta weeks.
+         * Updates the week display and re-renders all data.
+         */
+        function changeWeek(delta) {
+            currentWeekOffset += delta;
+            updateWeekDisplay();
+            renderAll();
+        }
+
+        function updateMonthDisplay() {
+            const options = { year: 'numeric', month: 'long' };
+            document.getElementById('currentMonthDisplay').textContent = 
+                currentDate.toLocaleDateString('en-US', options);
+        }
+
+        /**
+         * Update the week display header.
+         * Shows "May 11 - May 17, 2026" format, handling month/year crossings.
+         */
+        function updateWeekDisplay() {
+            const weekStart = getWeekStart(currentDate, currentWeekOffset);
+            const weekEnd = getWeekEnd(weekStart);
+
+            const formatOpts = { month: 'short', day: 'numeric' };
+            const startStr = weekStart.toLocaleDateString('en-US', formatOpts);
+            const endStr = weekEnd.toLocaleDateString('en-US', formatOpts);
+            const yearStr = weekEnd.getFullYear();
+
+            // If start and end are in different years, show both years
+            if (weekStart.getFullYear() !== weekEnd.getFullYear()) {
+                const startYearStr = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                document.getElementById('currentWeekDisplay').textContent = 
+                    `${startYearStr} - ${endStr}, ${yearStr}`;
+            } else {
+                document.getElementById('currentWeekDisplay').textContent = 
+                    `${startStr} - ${endStr}, ${yearStr}`;
+            }
+        }
+
+        // ==================== EXPENSE MANAGEMENT ====================
+        function addExpense(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('expenseName').value;
+            const amount = parseFloat(document.getElementById('expenseAmount').value);
+            const category = document.getElementById('expenseCategory').value;
+            const date = document.getElementById('expenseDate').value;
+
+            const expense = {
+                id: Date.now(),
+                name,
+                amount,
+                category,
+                date,
+                createdAt: new Date().toISOString()
+            };
+
+            expenses.push(expense);
+            saveExpenses();
+
+            document.getElementById('expenseForm').reset();
+            document.getElementById('expenseDate').valueAsDate = new Date();
+
+            showToast('✅ Expense saved!');
+            renderAll();
+        }
+
+        function deleteExpense(id) {
+            expenses = expenses.filter(e => e.id !== id);
+            saveExpenses();
+            renderAll();
+            showToast('🗑️ Expense removed');
+        }
+
+        function clearAllExpenses() {
+            if (confirm('Are you sure you want to delete ALL expenses? This cannot be undone.')) {
+                expenses = [];
+                saveExpenses();
+                renderAll();
+                showToast('🗑️ All expenses cleared');
+            }
+        }
+
+        function saveExpenses() {
+            localStorage.setItem('expenses', JSON.stringify(expenses));
+        }
+
+        // ==================== RENDERING ====================
+        function renderAll() {
+            renderExpenseList();
+            updateSummary();
+            updateBudgetProgress();
+            updateCharts();
+        }
+
+        function renderExpenseList() {
+            const list = document.getElementById('expenseList');
+            const currentExpenses = getCurrentExpenses();
+
+            const filterCat = document.getElementById('filterCategory').value;
+            const filterSearch = document.getElementById('filterSearch').value.toLowerCase();
+
+            let filtered = currentExpenses;
+            if (filterCat) filtered = filtered.filter(e => e.category === filterCat);
+            if (filterSearch) filtered = filtered.filter(e => e.name.toLowerCase().includes(filterSearch));
+
+            filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if (filtered.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📭</div>
+                        <p>${currentExpenses.length === 0 ? 'No expenses yet for this period.' : 'No matching expenses found.'}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = filtered.map(expense => {
+                const cat = categoryConfig[expense.category];
+                const dateObj = new Date(expense.date + 'T00:00:00');
+                const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+                return `
+                    <div class="expense-item">
+                        <div class="expense-info">
+                            <div class="expense-name">${expense.name}</div>
+                            <div class="expense-meta">
+                                <span class="category-badge ${cat.class}">${cat.emoji} ${cat.label}</span>
+                                <span>📅 ${dateStr}</span>
+                            </div>
+                        </div>
+                        <div class="expense-amount">$${expense.amount.toFixed(2)}</div>
+                        <div class="expense-actions">
+                            <button class="btn btn-danger btn-sm" onclick="deleteExpense(${expense.id})">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateSummary() {
+            const currentExpenses = getCurrentExpenses();
+            const total = currentExpenses.reduce((sum, e) => sum + e.amount, 0);
+            const count = currentExpenses.length;
+            const avg = count > 0 ? total / count : 0;
+
+            const catTotals = {};
+            currentExpenses.forEach(e => {
+                catTotals[e.category] = (catTotals[e.category] || 0) + e.amount;
+            });
+            let topCat = '-';
+            let topAmount = 0;
+            for (const [cat, amount] of Object.entries(catTotals)) {
+                if (amount > topAmount) {
+                    topAmount = amount;
+                    topCat = categoryConfig[cat]?.label || cat;
+                }
+            }
+
+            const budget = currentView === 'monthly' ? budgets.monthly : budgets.weekly;
+            const remaining = Math.max(budget - total, 0);
+
+            document.getElementById('totalExpenses').textContent = '$' + total.toFixed(2);
+            document.getElementById('transactionCount').textContent = count;
+            document.getElementById('avgExpense').textContent = '$' + avg.toFixed(2);
+            document.getElementById('topCategory').textContent = topCat;
+            document.getElementById('remainingBudget').textContent = '$' + remaining.toFixed(2);
+        }
+
+        // ==================== CHARTS ====================
+        function updateCharts() {
+            const currentExpenses = getCurrentExpenses();
+
+            // Pie chart
+            const catTotals = {};
+            currentExpenses.forEach(e => {
+                catTotals[e.category] = (catTotals[e.category] || 0) + e.amount;
+            });
+
+            const pieContainer = document.getElementById('pieChartContainer');
+
+            if (currentExpenses.length === 0) {
+                pieContainer.innerHTML = `
+                    <div class="chart-empty">
+                        <div class="icon">📊</div>
+                        <p>Add some expenses to see your breakdown!</p>
+                    </div>
+                `;
+            } else {
+                pieContainer.innerHTML = '<canvas id="pieChart"></canvas>';
+                const pieCtx = document.getElementById('pieChart').getContext('2d');
+                const pieData = {
+                    labels: Object.keys(catTotals).map(k => categoryConfig[k]?.label || k),
+                    datasets: [{
+                        data: Object.values(catTotals),
+                        backgroundColor: Object.keys(catTotals).map(k => categoryConfig[k]?.color || '#94a3b8'),
+                        borderWidth: 0
+                    }]
+                };
+
+                if (pieChart) pieChart.destroy();
+                pieChart = new Chart(pieCtx, {
+                    type: 'doughnut',
+                    data: pieData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { color: '#94a3b8', padding: 16, font: { size: 12 } }
+                            }
+                        },
+                        cutout: '60%'
+                    }
+                });
+            }
+
+            // Bar chart
+            const barContainer = document.getElementById('barChartContainer');
+
+            if (currentExpenses.length === 0) {
+                barContainer.innerHTML = `
+                    <div class="chart-empty">
+                        <div class="icon">📈</div>
+                        <p>Add some expenses to see your spending pattern!</p>
+                    </div>
+                `;
+            } else {
+                barContainer.innerHTML = '<canvas id="barChart"></canvas>';
+                const barCtx = document.getElementById('barChart').getContext('2d');
+
+                let barLabels, barData;
+
+                if (currentView === 'monthly') {
+                    // Daily spending for month
+                    const dailyTotals = {};
+                    currentExpenses.forEach(e => {
+                        const day = new Date(e.date + 'T00:00:00').getDate();
+                        dailyTotals[day] = (dailyTotals[day] || 0) + e.amount;
+                    });
+                    const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+                    barLabels = Array.from({length: daysInMonth}, (_, i) => i + 1);
+                    barData = barLabels.map(d => dailyTotals[d] || 0);
+                } else {
+                    // Daily spending for week (Sun-Sat)
+                    const weekStart = getWeekStart(currentDate, currentWeekOffset);
+                    const dailyTotals = {};
+                    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+                    currentExpenses.forEach(e => {
+                        const d = new Date(e.date + 'T00:00:00');
+                        const dayIndex = d.getDay(); // 0=Sun, 6=Sat
+                        dailyTotals[dayIndex] = (dailyTotals[dayIndex] || 0) + e.amount;
+                    });
+
+                    barLabels = dayNames;
+                    barData = [0,1,2,3,4,5,6].map(dayIndex => dailyTotals[dayIndex] || 0);
+                }
+
+                if (barChart) barChart.destroy();
+                barChart = new Chart(barCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: barLabels,
+                        datasets: [{
+                            label: 'Spending ($)',
+                            data: barData,
+                            backgroundColor: '#06b6d4',
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: {
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { color: '#94a3b8', font: { size: 11 } }
+                            },
+                            y: {
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { 
+                                    color: '#94a3b8',
+                                    callback: function(value) { return '$' + value; },
+                                    font: { size: 11 }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // ==================== RECEIPT HANDLING ====================
+        function setupDragDrop() {
+            const dropZone = document.getElementById('dropZone');
+
+            ['dragover', 'dragenter'].forEach(event => {
+                dropZone.addEventListener(event, (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('dragover');
+                });
+            });
+
+            ['dragleave', 'dragend', 'drop'].forEach(event => {
+                dropZone.addEventListener(event, (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('dragover');
+                });
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                const files = e.dataTransfer.files;
+                if (files.length > 0) processReceipt(files[0]);
+            });
+        }
+
+        function handleReceiptUpload(event) {
+            const file = event.target.files[0];
+            if (file) processReceipt(file);
+        }
+
+        function processReceipt(file) {
+            const preview = document.getElementById('receiptPreview');
+            const img = document.getElementById('receiptImage');
+            const progressBar = document.getElementById('uploadProgress');
+            const progressFill = document.getElementById('progressFill');
+
+            preview.style.display = 'block';
+            progressBar.classList.remove('hidden');
+            progressFill.style.width = '0%';
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                img.src = e.target.result;
+                simulateExtraction();
+            };
+            reader.readAsDataURL(file);
+
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 15 + 5;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                }
+                progressFill.style.width = progress + '%';
+            }, 200);
+        }
+
+        function simulateExtraction() {
+            setTimeout(() => {
+                const demoItems = [
+                    { name: 'Organic Milk 1L', amount: 4.99, category: 'food' },
+                    { name: 'Whole Wheat Bread', amount: 3.49, category: 'food' },
+                    { name: 'Fresh Bananas', amount: 2.29, category: 'food' },
+                    { name: 'Ground Coffee', amount: 8.99, category: 'food' },
+                    { name: 'Toilet Paper 12pk', amount: 12.99, category: 'shopping' }
+                ];
+
+                extractedReceiptItems = demoItems;
+                showReceiptModal(demoItems);
+
+                document.getElementById('uploadProgress').classList.add('hidden');
+                showToast('✅ Receipt scanned! Review the items below.');
+            }, 2500);
+        }
+
+        function showReceiptModal(items) {
+            const container = document.getElementById('receiptItemsContainer');
+            container.innerHTML = '';
+            items.forEach((item, index) => addReceiptItemRow(item, index));
+            document.getElementById('receiptModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function addReceiptItemRow(item = null, index = null) {
+            const container = document.getElementById('receiptItemsContainer');
+            const row = document.createElement('div');
+            row.className = 'receipt-item-row';
+            row.dataset.index = index !== null ? index : Date.now();
+
+            row.innerHTML = `
+                <input type="text" class="item-name" placeholder="Item name" value="${item ? item.name : ''}">
+                <input type="number" class="item-amount" placeholder="0.00" step="0.01" value="${item ? item.amount : ''}">
+                <select class="item-category">
+                    <option value="food" ${item && item.category === 'food' ? 'selected' : ''}>🍔 Food</option>
+                    <option value="transport" ${item && item.category === 'transport' ? 'selected' : ''}>🚗 Transport</option>
+                    <option value="utilities" ${item && item.category === 'utilities' ? 'selected' : ''}>💡 Utilities</option>
+                    <option value="entertainment" ${item && item.category === 'entertainment' ? 'selected' : ''}>🎬 Fun</option>
+                    <option value="shopping" ${item && item.category === 'shopping' ? 'selected' : ''}>🛍️ Shopping</option>
+                    <option value="health" ${item && item.category === 'health' ? 'selected' : ''}>🏥 Health</option>
+                    <option value="other" ${item && item.category === 'other' ? 'selected' : ''}>📦 Other</option>
+                </select>
+                <button onclick="this.parentElement.remove()" title="Remove item">✕</button>
+            `;
+
+            container.appendChild(row);
+        }
+
+        function closeReceiptModal() {
+            document.getElementById('receiptModal').classList.remove('active');
+            document.body.style.overflow = '';
+            document.getElementById('receiptPreview').style.display = 'none';
+            document.getElementById('receiptInput').value = '';
+            extractedReceiptItems = [];
+        }
+
+        function confirmReceiptItems() {
+            const rows = document.querySelectorAll('.receipt-item-row');
+            let added = 0;
+            const today = new Date().toISOString().split('T')[0];
+
+            rows.forEach(row => {
+                const name = row.querySelector('.item-name').value.trim();
+                const amount = parseFloat(row.querySelector('.item-amount').value);
+                const category = row.querySelector('.item-category').value;
+
+                if (name && amount > 0) {
+                    expenses.push({
+                        id: Date.now() + Math.random(),
+                        name,
+                        amount,
+                        category,
+                        date: today,
+                        createdAt: new Date().toISOString(),
+                        fromReceipt: true
+                    });
+                    added++;
+                }
+            });
+
+            if (added > 0) {
+                saveExpenses();
+                renderAll();
+                showToast(`✅ Added ${added} items from receipt!`);
+            } else {
+                showToast('⚠️ No valid items to add');
+            }
+
+            closeReceiptModal();
+        }
+
+        // ==================== EXPORT ====================
+        function exportData() {
+            const data = {
+                exportDate: new Date().toISOString(),
+                budgets: budgets,
+                expenses: expenses,
+                summary: {
+                    totalExpenses: expenses.reduce((s, e) => s + e.amount, 0),
+                    totalTransactions: expenses.length,
+                    categories: {}
+                }
+            };
+
+            expenses.forEach(e => {
+                data.summary.categories[e.category] = (data.summary.categories[e.category] || 0) + e.amount;
+            });
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `budget_buddy_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showToast('📥 Data exported! Check your downloads.');
+        }
+
+        // ==================== TOAST ====================
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // ==================== KEYBOARD SHORTCUTS ====================
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeReceiptModal();
+                document.getElementById('monthlyBudgetInput').classList.add('hidden');
+                document.getElementById('weeklyBudgetInput').classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
